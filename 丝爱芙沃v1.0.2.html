@@ -1,0 +1,2257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全队 DPS 计算器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 4l7 16 16 7-16 7-7 16-7-16-16-7 16-7z' fill='%23C9A15E'/%3E%3Ccircle cx='32' cy='32' r='9' fill='%230E1C30'/%3E%3Ccircle cx='32' cy='32' r='4' fill='%23F0E3BE'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@600;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+<style>
+  :root{
+    --bg0:#0A1320; --bg1:#0E1C30; --bg2:#13273F;
+    --card:rgba(17,32,55,.78);
+    --gold:#C9A15E; --gold-soft:#D9BC7F; --gold-dim:rgba(201,161,94,.35);
+    --ink:#EDE7D8; --ink-dim:#A9B4C4; --ink-faint:#6E7B8F;
+    --ok:#9CC5A1; --warn:#E0B45A;
+    --line:rgba(201,161,94,.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:auto;}
+  body{
+    font-family:"Noto Sans SC","Microsoft YaHei","PingFang SC",sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(201,161,94,.10), transparent 60%),
+      radial-gradient(900px 520px at -10% 20%, rgba(78,120,180,.14), transparent 60%),
+      linear-gradient(180deg, var(--bg0), var(--bg1) 55%, var(--bg2));
+    min-height:100vh;
+    line-height:1.8;
+  }
+  .stars{
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    background-image:
+      radial-gradient(1.2px 1.2px at 12% 22%, rgba(240,227,190,.8), transparent),
+      radial-gradient(1px 1px at 28% 8%, rgba(240,227,190,.5), transparent),
+      radial-gradient(1.4px 1.4px at 44% 34%, rgba(240,227,190,.65), transparent),
+      radial-gradient(1px 1px at 61% 12%, rgba(240,227,190,.45), transparent),
+      radial-gradient(1.2px 1.2px at 74% 28%, rgba(240,227,190,.7), transparent),
+      radial-gradient(1px 1px at 88% 16%, rgba(240,227,190,.5), transparent),
+      radial-gradient(1.3px 1.3px at 18% 62%, rgba(240,227,190,.45), transparent),
+      radial-gradient(1px 1px at 55% 72%, rgba(240,227,190,.5), transparent),
+      radial-gradient(1.2px 1.2px at 82% 60%, rgba(240,227,190,.6), transparent),
+      radial-gradient(1px 1px at 33% 84%, rgba(240,227,190,.4), transparent),
+      radial-gradient(1.1px 1.1px at 68% 90%, rgba(240,227,190,.5), transparent);
+  }
+  .wrap{position:relative; z-index:1; max-width:1440px; margin:0 auto; padding:44px 32px 64px;}
+  header{text-align:center; margin-bottom:42px;}
+  .kicker{
+    display:inline-flex; align-items:center; gap:10px;
+    color:var(--gold-soft); font-size:13px; letter-spacing:4px; margin-bottom:14px;
+  }
+  .kicker::before,.kicker::after{content:""; width:44px; height:1px; background:var(--gold-dim);}
+  h1{
+    font-family:"Noto Serif SC","STSong","SimSun",serif;
+    font-weight:900; font-size:clamp(28px,4.5vw,44px); letter-spacing:2px;
+    color:var(--ink);
+  }
+  h1 .gold{color:var(--gold);}
+  .sub{color:var(--ink-dim); font-size:15px; margin-top:14px;}
+  .layout{display:grid; grid-template-columns:1fr; gap:26px; align-items:start;}
+  .panel{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:30px 34px;
+  }
+  .panel h2{
+    font-family:"Noto Serif SC","STSong","SimSun",serif; font-size:17px; font-weight:600;
+    letter-spacing:1px; color:var(--gold-soft);
+    padding-bottom:14px; margin-bottom:22px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:8px;
+  }
+  .panel h2 svg{flex:none;}
+  .field{margin-bottom:22px;}
+  .field:last-child{margin-bottom:6px;}
+  .param-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:20px 22px;}
+  .param-grid .field{margin-bottom:0;}
+  .param-grid .calc-btn{grid-column:1 / -1; margin-top:10px;}
+  label{display:block; font-size:13.5px; color:var(--ink-dim); margin-bottom:10px;}
+  label .tag{color:var(--gold-soft); font-size:12px; margin-left:6px;}
+  input{
+    width:100%; padding:13px 14px; font-size:16px;
+    background:#0B1626; color:var(--ink);
+    border:1px solid rgba(201,161,94,.32); border-radius:9px; outline:none;
+    font-family:inherit;
+  }
+  input:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,161,94,.15);}
+  input::placeholder{color:var(--ink-faint);}
+  .hint{font-size:13px; color:var(--ink-faint); margin-top:8px; line-height:1.75;}
+  .calc-btn{
+    width:100%; margin-top:6px; padding:13px; font-size:16px; font-weight:700; letter-spacing:3px;
+    background:var(--gold); color:#101B2A; border:none; border-radius:9px; cursor:pointer;
+    font-family:inherit; transition:background .18s ease;
+  }
+  .calc-btn:hover{background:var(--gold-soft);}
+  .calc-btn:focus-visible{outline:2px solid var(--gold-soft); outline-offset:2px;}
+  .card-grid{display:grid; grid-template-columns:1.3fr .95fr; gap:28px; align-items:start;}
+  .mult table{width:100%; border-collapse:collapse; font-size:14px;}
+  .mult th,.mult td{padding:10px 8px; text-align:left;}
+  .mult thead th{
+    color:var(--ink-faint); font-weight:400; font-size:12px; letter-spacing:1px;
+    border-bottom:1px solid var(--line);
+  }
+  .mult td{border-bottom:1px solid rgba(201,161,94,.12);}
+  .mult td:first-child{font-weight:500; color:var(--gold-soft);}
+  .mult td:last-child{text-align:right; font-variant-numeric:tabular-nums;}
+  .mult tr:last-child td{border-bottom:none;}
+  .mult td:last-child input{text-align:center;}
+  .muted{color:var(--ink-faint);}
+  .res-block{margin-top:28px; padding-top:24px; border-top:1px solid var(--line);}
+  .big-summary{display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:24px;}
+  .sum-card{
+    border:1px solid var(--line); border-radius:11px; padding:16px 18px; background:#0D1A2E;
+  }
+  .sum-card .lbl{font-size:12px; color:var(--ink-dim); letter-spacing:1px;}
+  .sum-card .num{
+    font-family:"Noto Serif SC","STSong",serif; font-size:24px; font-weight:900;
+    font-variant-numeric:tabular-nums; margin-top:4px;
+  }
+  .sum-card.total{background:linear-gradient(135deg, rgba(201,161,94,.16), rgba(201,161,94,.05));}
+  .sum-card.total .num{color:var(--gold); font-size:28px;}
+  .sum-card .num small{font-size:13px; font-weight:500; color:var(--ink-dim);}
+  .team-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:22px 24px; margin-bottom:22px;}
+  .team-grid .field{margin-bottom:0;}
+  .table-scroll{overflow-x:auto; margin-bottom:16px;}
+  table.detail{width:100%; border-collapse:collapse; font-size:14px; table-layout:fixed;}
+  table.detail col.col-a{width:4%;} table.detail col.col-b{width:13%;}
+  table.detail col.col-c{width:7%;} table.detail col.col-tao{width:5%;}
+  table.detail col.col-fur{width:6%;} table.detail col.col-d{width:29%;}
+  table.detail col.col-e{width:5%;} table.detail col.col-f{width:31%;}
+  table.detail th{
+    padding:11px 10px; text-align:left; font-weight:500; font-size:13px; color:var(--ink-faint);
+    letter-spacing:1px; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  table.detail td{padding:11px 10px; border-bottom:1px solid rgba(201,161,94,.10); vertical-align:middle;}
+  table.detail tr:last-child td{border-bottom:none;}
+  table.detail td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .dmg-tip{position:relative; display:inline-block; cursor:help; text-align:right;}
+  .dmg-tip:hover::after{
+    content:attr(data-tip);
+    position:absolute; right:0; bottom:calc(100% + 12px);
+    width:300px; padding:12px 14px;
+    background:#0D1A2E; border:1px solid var(--gold-dim); border-radius:9px;
+    box-shadow:0 10px 28px rgba(0,0,0,.5); z-index:60;
+    font-size:12.5px; line-height:1.85; white-space:pre-line; text-align:left;
+    color:var(--ink); font-weight:400; letter-spacing:0;
+  }
+  .q-pre{color:#9CC5A1;} .q-post{color:#E8C98A;}
+  .nodmg{color:var(--ink-faint);}
+  .table-tip{font-size:13px; color:var(--ink-faint); margin-bottom:10px; line-height:1.8;}
+  .feather-sum{font-size:12.5px; color:var(--ink-dim); margin-bottom:10px;}
+  .feather-sum b{color:var(--gold-soft); font-weight:600;}
+  .feather-sum.over{color:var(--warn);}
+  .fcol{text-align:left; line-height:2;}
+  .fseg{display:inline-flex; align-items:center; gap:4px; margin:2px 6px 2px 0; font-size:11px; color:var(--ink-faint); white-space:nowrap;}
+  .fseg input[type="number"]{
+    width:44px; padding:2px 4px; font-size:13px; text-align:center;
+    background:#0B1626; color:var(--gold-soft);
+    border:1px solid rgba(201,161,94,.32); border-radius:6px; outline:none; font-family:inherit;
+  }
+  .fseg input[type="number"]:focus{border-color:var(--gold);}
+  .fiss-toggle{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:3px 10px 3px 8px; border-radius:999px;
+    border:1px solid rgba(201,161,94,.35);
+    background:rgba(201,161,94,.06);
+    cursor:pointer; user-select:none; white-space:nowrap;
+    font-size:12px; line-height:1.5; color:var(--gold-soft);
+    transition:background .18s ease, border-color .18s ease, box-shadow .18s ease, color .18s ease;
+    vertical-align:middle;
+  }
+  .fiss-toggle input{position:absolute; opacity:0; pointer-events:none;}
+  .fiss-toggle svg{flex:none; transition:color .18s ease;}
+  .fiss-txt{font-weight:500;}
+  .fiss-txt b{font-weight:700; color:#F0E3BE;}
+  .fiss-toggle.on{
+    background:linear-gradient(135deg, rgba(201,161,94,.32), rgba(201,161,94,.12));
+    border-color:var(--gold);
+    color:#F3E6C2;
+    box-shadow:0 0 10px rgba(201,161,94,.25);
+  }
+  .fiss-set{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 9px 3px 7px; margin-left:6px;
+    border:1px solid rgba(201,161,94,.28); border-radius:8px;
+    background:rgba(13,26,46,.55);
+    font-size:11px; color:var(--ink-faint); white-space:nowrap;
+    vertical-align:middle;
+  }
+  .fiss-set .fseg{margin:0;}
+  .tao-box{display:inline-flex; align-items:center; justify-content:center; cursor:pointer;}
+  .tao-box input{width:auto; padding:0; margin:0; accent-color:var(--gold);}
+  .taoc{text-align:center;}
+  .fiss-line{display:inline-flex; align-items:center; gap:5px; color:var(--gold-soft);}
+  .fiss-inline{
+    width:64px; padding:2px 4px; font-size:13px; text-align:center;
+    background:#0B1626; color:var(--gold-soft);
+    border:1px solid rgba(201,161,94,.32); border-radius:6px; outline:none; font-family:inherit;
+  }
+  .fiss-inline:focus{border-color:var(--gold);}
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none; margin:0;}
+  input[type="number"]{-moz-appearance:textfield;}
+  .team-break{font-size:13.5px; color:var(--ink-dim); line-height:2.2;}
+  .team-break b{color:var(--gold-soft); font-weight:600;}
+  .team-break .bar{display:inline-block; height:9px; border-radius:5px; background:var(--gold-dim); vertical-align:middle; margin:0 8px;}
+  .reset-btn{
+    display:inline-block; margin-bottom:12px; padding:6px 18px;
+    font-size:12px; color:var(--ink-faint); background:transparent;
+    border:1px solid var(--line); border-radius:999px; cursor:pointer;
+    font-family:inherit; letter-spacing:1px;
+    transition:color .18s ease, border-color .18s ease;
+  }
+  .reset-btn:hover{color:var(--warn); border-color:var(--warn);}
+  footer{text-align:center; color:var(--ink-faint); font-size:12px; margin-top:26px;}
+  @media (max-width:1200px){
+    .card-grid{grid-template-columns:1fr;}
+    .big-summary{grid-template-columns:1fr 1fr;}
+    .team-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width:640px){
+    .param-grid{grid-template-columns:1fr 1fr; gap:16px 14px;}
+    .big-summary{grid-template-columns:1fr;}
+    .fseg input[type="number"]{width:40px;}
+    .fiss-inline{width:52px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;}
+  }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+<div class="wrap">
+  <header>
+    <div class="kicker">GENSHIN IMPACT</div>
+    <h1>全队<span class="gold">DPS 计算器</span></h1>
+    <p class="sub">丝沃·2丝 + 爱可菲 + 芙宁娜 + 沃雅妮莎，共享同一轴长计算全队总伤与 DPS</p>
+  </header>
+
+  <div class="layout">
+    <!-- ===== 全队汇总 ===== -->
+    <section class="panel" aria-label="全队汇总">
+      <h2>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A15E" stroke-width="1.6"><path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/></svg>
+        全队汇总
+      </h2>
+      <div class="team-grid">
+        <div class="field">
+          <label for="teamDuration">轴长（秒）</label>
+          <input id="teamDuration" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 18">
+          <div class="hint">全队 DPS = 四角色总伤之和 ÷ 轴长</div>
+        </div>
+        <div class="field">
+          <label for="teamCalcAll">一键重算</label>
+          <button class="calc-btn" id="teamCalcAll" style="margin-top:0;">重算全部角色</button>
+        </div>
+      </div>
+      <div class="big-summary" id="teamSummary">
+        <div class="sum-card total"><div class="lbl">全队总伤</div><div class="num">—</div></div>
+        <div class="sum-card total"><div class="lbl">全队 DPS</div><div class="num">—</div></div>
+        <div class="sum-card"><div class="lbl">最高 DPS 角色</div><div class="num">—</div></div>
+        <div class="sum-card"><div class="lbl">最低 DPS 角色</div><div class="num">—</div></div>
+      </div>
+      <div class="team-break" id="teamBreak"></div>
+    </section>
+
+    <!-- ===== 丝沃·2丝 ===== -->
+    <section class="panel" aria-label="丝沃·2丝">
+      <h2>丝沃·2丝</h2>
+      <div class="card-grid">
+        <div>
+          <div class="param-grid">
+            <div class="field">
+              <label for="si_charLv">角色等级 <span class="tag">怪物固定 110</span></label>
+              <input id="si_charLv" type="number" inputmode="decimal" min="1" max="90" step="any" placeholder="例如 90">
+            </div>
+            <div class="field">
+              <label for="si_baseAtk">基础攻击力（白值）</label>
+              <input id="si_baseAtk" type="number" inputmode="decimal" min="0" step="any" value="1033" placeholder="默认 1033">
+              <div class="hint">角色基础 + 武器基础</div>
+            </div>
+            <div class="field">
+              <label for="si_atkPct">攻击力加成（%）</label>
+              <input id="si_atkPct" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 46.6">
+              <div class="hint">含讨龙 48%</div>
+            </div>
+            <div class="field">
+              <label for="si_smallAtk">小攻击（固定攻击）</label>
+              <input id="si_smallAtk" type="number" inputmode="decimal" min="0" step="any">
+              <div class="hint">攻击区 = 白值×(1+加成%)+小攻击</div>
+            </div>
+            <div class="field">
+              <label for="si_flatAtk">每根羽毛数值</label>
+              <input id="si_flatAtk" type="number" inputmode="decimal" min="0" step="any" value="3500" placeholder="默认 3500">
+              <div class="hint">与攻击区×倍率并列相加、不乘倍率</div>
+            </div>
+            <div class="field">
+              <label for="si_featherTimes">羽毛次数</label>
+              <input id="si_featherTimes" type="number" inputmode="decimal" min="0" step="1" value="25" placeholder="默认 25">
+            </div>
+            <div class="field">
+              <label for="si_daQuanPct">大权区（乘数）</label>
+              <input id="si_daQuanPct" type="number" inputmode="decimal" min="0" step="any" value="1.7" placeholder="默认 1.7">
+              <div class="hint">仅普攻乘，Z/裂隙不乘</div>
+            </div>
+            <div class="field">
+              <label for="si_dmgBonus">增伤（%）</label>
+              <input id="si_dmgBonus" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 46.6">
+            </div>
+            <div class="field">
+              <label for="si_furenaPct">芙宁娜增伤数值（%）</label>
+              <input id="si_furenaPct" type="number" inputmode="decimal" min="0" step="any" value="100" placeholder="默认 100">
+              <div class="hint">未勾选行自动扣除</div>
+            </div>
+            <div class="field">
+              <label for="si_critRate">暴击率（%）</label>
+              <input id="si_critRate" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="例如 70">
+            </div>
+            <div class="field">
+              <label for="si_critDmg">暴击伤害（%）</label>
+              <input id="si_critDmg" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 180">
+            </div>
+            <div class="field">
+              <label for="si_enemyRes">减抗后抗性（%）</label>
+              <input id="si_enemyRes" type="number" inputmode="decimal" step="any" placeholder="例如 10">
+              <div class="hint">可为负值</div>
+            </div>
+            <div class="field">
+              <label for="si_defShred">减防（%）</label>
+              <input id="si_defShred" type="number" inputmode="decimal" min="0" step="any" value="0" placeholder="默认 0">
+            </div>
+            <button class="calc-btn" id="si_calcBtn">计算丝沃·2丝</button>
+          </div>
+        </div>
+        <div class="mult">
+          <table>
+            <thead><tr><th>动作</th><th>倍率</th></tr></thead>
+            <tbody>
+              <tr><td>A1</td><td>281.1%</td></tr>
+              <tr><td>A2</td><td>253.5%</td></tr>
+              <tr><td>A3</td><td>160.3% × 2 次</td></tr>
+              <tr><td>Z 重击</td><td>94.3% × 3 次</td></tr>
+              <tr><td>E / Q / S</td><td class="muted">无伤害</td></tr>
+            </tbody>
+          </table>
+          <p class="hint" id="si_totalMultLine"></p>
+          <p class="hint">序列 e2aq 223 223 222z 223 22zs23；Q 后前 10 段普攻增伤 +20%，Z/裂隙 −60% 且不乘大权区。</p>
+        </div>
+      </div>
+      <div class="res-block">
+        <div class="big-summary" id="si_summary">
+          <div class="sum-card total"><div class="lbl">丝总伤</div><div class="num">—</div></div>
+          <div class="sum-card total"><div class="lbl">丝 DPS</div><div class="num">—</div></div>
+          <div class="sum-card"><div class="lbl">Q 前</div><div class="num">—</div></div>
+          <div class="sum-card"><div class="lbl">Q 后</div><div class="num">—</div></div>
+        </div>
+        <p class="table-tip">羽毛框 = 该倍率前 N 次判定吃羽（不乘倍率）；Q/Z 行可开「裂隙 500%」；讨龙/芙宁娜勾选控制 48%/增伤数值。</p>
+        <div class="feather-sum" id="si_featherSummary"></div>
+        <div class="table-scroll">
+          <table class="detail" id="si_detailTable">
+            <colgroup>
+              <col class="col-a"><col class="col-b"><col class="col-c"><col class="col-tao"><col class="col-fur"><col class="col-d"><col class="col-e"><col class="col-f">
+            </colgroup>
+            <thead>
+              <tr><th>#</th><th>羽毛(次)</th><th>动作</th><th>讨龙</th><th>芙宁娜</th><th>倍率明细</th><th>阶段</th><th>伤害</th></tr>
+            </thead>
+            <tbody id="si_detailBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 爱可菲 ===== -->
+    <section class="panel" aria-label="爱可菲">
+      <h2>爱可菲</h2>
+      <div class="card-grid">
+        <div>
+          <div class="param-grid">
+            <div class="field">
+              <label for="ak_charLv">角色等级 <span class="tag">怪物固定 110</span></label>
+              <input id="ak_charLv" type="number" inputmode="decimal" min="1" max="90" step="any" placeholder="例如 90">
+            </div>
+            <div class="field">
+              <label for="ak_baseAtk">基础攻击力（白值）</label>
+              <input id="ak_baseAtk" type="number" inputmode="decimal" min="0" step="any" placeholder="请填写白值">
+              <div class="hint">角色基础 + 武器基础</div>
+            </div>
+            <div class="field">
+              <label for="ak_atkPct">攻击力加成（%）</label>
+              <input id="ak_atkPct" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 46.6">
+              <div class="hint">含讨龙 48%</div>
+            </div>
+            <div class="field">
+              <label for="ak_smallAtk">小攻击（固定攻击）</label>
+              <input id="ak_smallAtk" type="number" inputmode="decimal" min="0" step="any">
+              <div class="hint">攻击区 = 白值×(1+加成%)+小攻击</div>
+            </div>
+            <div class="field">
+              <label for="ak_flatAtk">每根羽毛数值</label>
+              <input id="ak_flatAtk" type="number" inputmode="decimal" min="0" step="any" value="3500" placeholder="默认 3500">
+              <div class="hint">与攻击区×倍率并列相加、不乘倍率</div>
+            </div>
+            <div class="field">
+              <label for="ak_featherTimes">羽毛次数</label>
+              <input id="ak_featherTimes" type="number" inputmode="decimal" min="0" step="1" value="0" placeholder="默认 0">
+            </div>
+            <div class="field">
+              <label for="ak_dmgBonus">增伤（%）</label>
+              <input id="ak_dmgBonus" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 46.6">
+            </div>
+            <div class="field">
+              <label for="ak_furenaPct">芙宁娜增伤数值（%）</label>
+              <input id="ak_furenaPct" type="number" inputmode="decimal" min="0" step="any" value="100" placeholder="默认 100">
+            </div>
+            <div class="field">
+              <label for="ak_critRate">暴击率（%）</label>
+              <input id="ak_critRate" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="例如 70">
+            </div>
+            <div class="field">
+              <label for="ak_critDmg">暴击伤害（%）</label>
+              <input id="ak_critDmg" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 180">
+            </div>
+            <div class="field">
+              <label for="ak_enemyRes">减抗后抗性（%）</label>
+              <input id="ak_enemyRes" type="number" inputmode="decimal" step="any" placeholder="例如 10">
+            </div>
+            <div class="field">
+              <label for="ak_defShred">减防（%）</label>
+              <input id="ak_defShred" type="number" inputmode="decimal" min="0" step="any" value="0" placeholder="默认 0">
+            </div>
+            <button class="calc-btn" id="ak_calcBtn">计算爱可菲</button>
+          </div>
+        </div>
+        <div class="mult">
+          <table>
+            <thead><tr><th>动作</th><th>倍率</th></tr></thead>
+            <tbody>
+              <tr><td>E 机关（低温冷藏）</td><td>228% × <input class="fiss-inline" id="ak_eHits" type="number" min="1" max="99" step="1" value="20"> 段</td></tr>
+              <tr><td>Q 爆发</td><td><input class="fiss-inline" id="ak_qMultPct" type="number" min="0" step="any" value="1067.04"> %</td></tr>
+              <tr><td>普攻</td><td class="muted">无伤害，不计入</td></tr>
+            </tbody>
+          </table>
+          <p class="hint" id="ak_totalMultLine"></p>
+          <p class="hint">E 机关每秒 1 段、段数可调；Q 明细行可勾选启用、可吃 1 根羽毛。</p>
+        </div>
+      </div>
+      <div class="res-block">
+        <div class="big-summary" id="ak_summary">
+          <div class="sum-card total"><div class="lbl">爱可菲总伤</div><div class="num">—</div></div>
+          <div class="sum-card total"><div class="lbl">爱可菲 DPS</div><div class="num">—</div></div>
+          <div class="sum-card"><div class="lbl">E 机关</div><div class="num">—</div></div>
+          <div class="sum-card"><div class="lbl">Q 爆发</div><div class="num">—</div></div>
+        </div>
+        <p class="table-tip">羽毛框 = E 机关前 N 段吃羽；Q 行「启用」勾选 + Q 羽（0/1）；讨龙/芙宁娜勾选控制。</p>
+        <div class="feather-sum" id="ak_featherSummary"></div>
+        <div class="table-scroll">
+          <table class="detail" id="ak_detailTable">
+            <colgroup>
+              <col class="col-a"><col class="col-b"><col class="col-c"><col class="col-tao"><col class="col-fur"><col class="col-d"><col class="col-e"><col class="col-f">
+            </colgroup>
+            <thead>
+              <tr><th>#</th><th>羽毛(次)</th><th>动作</th><th>讨龙</th><th>芙宁娜</th><th>倍率明细</th><th>阶段</th><th>伤害</th></tr>
+            </thead>
+            <tbody id="ak_detailBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 芙宁娜 ===== -->
+    <section class="panel" aria-label="芙宁娜">
+      <h2>芙宁娜</h2>
+      <div class="card-grid">
+        <div>
+          <div class="param-grid">
+            <div class="field">
+              <label for="fu_charLv">角色等级 <span class="tag">怪物固定 110</span></label>
+              <input id="fu_charLv" type="number" inputmode="decimal" min="1" max="90" step="any" placeholder="例如 90">
+            </div>
+            <div class="field">
+              <label for="fu_baseAtk">基础生命（白值）</label>
+              <input id="fu_baseAtk" type="number" inputmode="decimal" min="0" step="any" placeholder="请填写白值">
+              <div class="hint">角色基础 + 武器基础</div>
+            </div>
+            <div class="field">
+              <label for="fu_atkPct">生命值加成（%）</label>
+              <input id="fu_atkPct" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 46.6">
+              <div class="hint">含讨龙 48%</div>
+            </div>
+            <div class="field">
+              <label for="fu_smallAtk">小生命（固定生命）</label>
+              <input id="fu_smallAtk" type="number" inputmode="decimal" min="0" step="any">
+              <div class="hint">生命区 = 白值×(1+加成%)+小生命</div>
+            </div>
+            <div class="field">
+              <label for="fu_flatAtk">每根羽毛数值</label>
+              <input id="fu_flatAtk" type="number" inputmode="decimal" min="0" step="any" value="3500" placeholder="默认 3500">
+              <div class="hint">与生命区×倍率并列相加、不乘倍率</div>
+            </div>
+            <div class="field">
+              <label for="fu_featherTimes">羽毛次数</label>
+              <input id="fu_featherTimes" type="number" inputmode="decimal" min="0" step="1" value="0" placeholder="默认 0">
+            </div>
+            <div class="field">
+              <label for="fu_dmgBonus">增伤（%）</label>
+              <input id="fu_dmgBonus" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 46.6">
+            </div>
+            <div class="field">
+              <label for="fu_furenaPct">芙宁娜增伤数值（%）</label>
+              <input id="fu_furenaPct" type="number" inputmode="decimal" min="0" step="any" value="100" placeholder="默认 100">
+            </div>
+            <div class="field">
+              <label for="fu_critRate">暴击率（%）</label>
+              <input id="fu_critRate" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="例如 70">
+            </div>
+            <div class="field">
+              <label for="fu_critDmg">暴击伤害（%）</label>
+              <input id="fu_critDmg" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 180">
+            </div>
+            <div class="field">
+              <label for="fu_enemyRes">减抗后抗性（%）</label>
+              <input id="fu_enemyRes" type="number" inputmode="decimal" step="any" placeholder="例如 10">
+            </div>
+            <div class="field">
+              <label for="fu_defShred">减防（%）</label>
+              <input id="fu_defShred" type="number" inputmode="decimal" min="0" step="any" value="0" placeholder="默认 0">
+            </div>
+            <button class="calc-btn" id="fu_calcBtn">计算芙宁娜</button>
+          </div>
+        </div>
+        <div class="mult">
+          <table>
+            <thead><tr><th>动作</th><th>倍率</th></tr></thead>
+            <tbody>
+              <tr><td>沙龙·乌瑟</td><td><input class="fiss-inline" id="fu_eMult1Pct" type="number" min="0" step="any" placeholder="倍率"> % × <input class="fiss-inline" id="fu_eHits" type="number" min="1" max="99" step="1" value="20"> 段</td></tr>
+              <tr><td>沙龙·海薇玛</td><td><input class="fiss-inline" id="fu_eMult2Pct" type="number" min="0" step="any" placeholder="倍率"> %（段数同乌瑟）</td></tr>
+              <tr><td>沙龙·谢贝蕾妲</td><td><input class="fiss-inline" id="fu_eMult3Pct" type="number" min="0" step="any" placeholder="倍率"> %（段数同乌瑟）</td></tr>
+              <tr><td>Q 爆发</td><td><input class="fiss-inline" id="fu_qMultPct" type="number" min="0" step="any" placeholder="倍率"> %</td></tr>
+              <tr><td>普攻</td><td class="muted">无伤害，不计入</td></tr>
+            </tbody>
+          </table>
+          <p class="hint" id="fu_totalMultLine"></p>
+          <p class="hint">三只沙龙倍率分别填写（留空 = 不计该只）；Q 明细行可勾选启用。</p>
+        </div>
+      </div>
+      <div class="res-block">
+        <div class="big-summary" id="fu_summary">
+          <div class="sum-card total"><div class="lbl">芙宁娜总伤</div><div class="num">—</div></div>
+          <div class="sum-card total"><div class="lbl">芙宁娜 DPS</div><div class="num">—</div></div>
+          <div class="sum-card"><div class="lbl">沙龙总伤</div><div class="num">—</div></div>
+          <div class="sum-card"><div class="lbl">Q 爆发</div><div class="num">—</div></div>
+        </div>
+        <p class="table-tip">每只沙龙「前 N 段吃羽」数字框；Q 行「启用」勾选 + Q 羽（0/1）；讨龙/芙宁娜勾选控制。</p>
+        <div class="feather-sum" id="fu_featherSummary"></div>
+        <div class="table-scroll">
+          <table class="detail" id="fu_detailTable">
+            <colgroup>
+              <col class="col-a"><col class="col-b"><col class="col-c"><col class="col-tao"><col class="col-fur"><col class="col-d"><col class="col-e"><col class="col-f">
+            </colgroup>
+            <thead>
+              <tr><th>#</th><th>羽毛(次)</th><th>动作</th><th>讨龙</th><th>芙宁娜</th><th>倍率明细</th><th>阶段</th><th>伤害</th></tr>
+            </thead>
+            <tbody id="fu_detailBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 沃雅妮莎 ===== -->
+    <section class="panel" aria-label="沃雅妮莎">
+      <h2>沃雅妮莎</h2>
+      <div class="card-grid">
+        <div>
+          <div class="param-grid">
+            <div class="field">
+              <label for="wo_charLv">角色等级 <span class="tag">怪物固定 110</span></label>
+              <input id="wo_charLv" type="number" inputmode="decimal" min="1" max="90" step="any" placeholder="例如 90">
+            </div>
+            <div class="field">
+              <label for="wo_hp">最终生命值</label>
+              <input id="wo_hp" type="number" inputmode="decimal" min="0" step="any" placeholder="请填写">
+              <div class="hint">白值×(1+加成%)+小生命的合成结果</div>
+            </div>
+            <div class="field">
+              <label for="wo_flatAtk">每根羽毛数值</label>
+              <input id="wo_flatAtk" type="number" inputmode="decimal" min="0" step="any" value="3500" placeholder="默认 3500">
+              <div class="hint">与生命×倍率并列相加、不乘倍率</div>
+            </div>
+            <div class="field">
+              <label for="wo_featherTimes">羽毛次数</label>
+              <input id="wo_featherTimes" type="number" inputmode="decimal" min="0" step="1" value="25" placeholder="默认 25">
+            </div>
+            <div class="field">
+              <label for="wo_dmgBonus">增伤（%）</label>
+              <input id="wo_dmgBonus" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 46.6">
+            </div>
+            <div class="field">
+              <label for="wo_furenaPct">芙宁娜增伤数值（%）</label>
+              <input id="wo_furenaPct" type="number" inputmode="decimal" min="0" step="any" value="100" placeholder="默认 100">
+            </div>
+            <div class="field">
+              <label for="wo_critRate">暴击率（%）</label>
+              <input id="wo_critRate" type="number" inputmode="decimal" min="0" max="100" step="any" placeholder="例如 70">
+            </div>
+            <div class="field">
+              <label for="wo_critDmg">暴击伤害（%）</label>
+              <input id="wo_critDmg" type="number" inputmode="decimal" min="0" step="any" placeholder="例如 180">
+            </div>
+            <div class="field">
+              <label for="wo_enemyRes">减抗后抗性（%）</label>
+              <input id="wo_enemyRes" type="number" inputmode="decimal" step="any" placeholder="例如 10">
+              <div class="hint">可为负值</div>
+            </div>
+            <button class="calc-btn" id="wo_calcBtn">计算沃雅妮莎</button>
+          </div>
+        </div>
+        <div class="mult">
+          <table>
+            <thead><tr><th>动作</th><th>倍率</th></tr></thead>
+            <tbody>
+              <tr><td>麦克风</td><td><input class="fiss-inline" id="wo_multPct" type="number" min="0" step="any" placeholder="倍率"> % × <input class="fiss-inline" id="wo_multHits" type="number" min="0" step="1" placeholder="次数"> 次</td></tr>
+            </tbody>
+          </table>
+          <p class="hint" id="wo_totalMultLine"></p>
+          <p class="hint">生命倍率与次数自行填写；羽毛「前 N 次吃羽」+ 芙宁娜勾选。</p>
+        </div>
+      </div>
+      <div class="res-block">
+        <div class="big-summary" id="wo_summary">
+          <div class="sum-card total"><div class="lbl">沃雅妮莎总伤</div><div class="num">—</div></div>
+          <div class="sum-card total"><div class="lbl">沃雅妮莎 DPS</div><div class="num">—</div></div>
+        </div>
+        <p class="table-tip">「前 N 次吃羽」数字框（不乘倍率、每次最多 1 根）；「芙宁娜」勾选控制增伤数值扣除。</p>
+        <div class="feather-sum" id="wo_featherSummary"></div>
+        <div class="table-scroll">
+          <table class="detail" id="wo_detailTable">
+            <colgroup>
+              <col class="col-a"><col class="col-b"><col class="col-fur"><col class="col-d"><col class="col-f">
+            </colgroup>
+            <thead>
+              <tr><th>#</th><th>羽毛(次)</th><th>动作</th><th>芙宁娜</th><th>倍率明细</th><th>伤害</th></tr>
+            </thead>
+            <tbody id="wo_detailBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <button class="reset-btn" id="resetBtn">恢复默认配置</button>
+    <br>预览版 · 猫灵 · 2026-09-27<br>反馈 QQ：1592933029<br>v1.0.2
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ===== 公共工具 ===== */
+function fmt(n) {
+  return n.toLocaleString("zh-CN", { maximumFractionDigits: 0 });
+}
+function fmt1(n) {
+  return n.toLocaleString("zh-CN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+function fmtPct(n) {
+  return n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtMult(n) {
+  return (Math.round(n * 10000) / 100).toLocaleString("zh-CN") + "%";
+}
+function escAttr(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+}
+function el(id) { return document.getElementById(id); }
+function readNum(id) {
+  var v = parseFloat(el(id).value);
+  return isNaN(v) ? 0 : v;
+}
+function getTeamDuration() {
+  var v = parseFloat(el("teamDuration").value);
+  return isNaN(v) ? 0 : v;
+}
+
+/* ===== 全队汇总 ===== */
+var TEAM = { si: null, ak: null, fu: null, wo: null };
+function updateTeam() {
+  var names = [["丝沃·2丝", "si"], ["爱可菲", "ak"], ["芙宁娜", "fu"], ["沃雅妮莎", "wo"]];
+  var rows = [];
+  var total = 0;
+  for (var i = 0; i < names.length; i++) {
+    var t = TEAM[names[i][1]] ? TEAM[names[i][1]].getTotal() : 0;
+    total += t;
+    rows.push({ name: names[i][0], key: names[i][1], total: t });
+  }
+  var dur = getTeamDuration();
+  var dps = dur > 0 ? total / dur : 0;
+  var sum = el("teamSummary");
+  if (sum) {
+    var best = null, worst = null;
+    for (var k = 0; k < rows.length; k++) {
+      if (rows[k].total <= 0) { continue; }
+      if (!best || rows[k].total > best.total) { best = rows[k]; }
+      if (!worst || rows[k].total < worst.total) { worst = rows[k]; }
+    }
+    sum.innerHTML =
+      '<div class="sum-card total"><div class="lbl">全队总伤</div><div class="num">' + fmt(total) + '</div></div>' +
+      '<div class="sum-card total"><div class="lbl">全队 DPS</div><div class="num">' + (dur > 0 ? fmt(dps) : "—") + '</div></div>' +
+      '<div class="sum-card"><div class="lbl">最高 DPS 角色</div><div class="num"><small>' + (best ? best.name : "—") + '</small></div></div>' +
+      '<div class="sum-card"><div class="lbl">最低 DPS 角色</div><div class="num"><small>' + (worst ? worst.name : "—") + '</small></div></div>';
+  }
+  var brk = el("teamBreak");
+  if (brk) {
+    var html = "";
+    for (var j = 0; j < rows.length; j++) {
+      var pct = total > 0 ? (rows[j].total / total * 100) : 0;
+      var w = Math.round(pct * 6);
+      html += rows[j].name + " <b>" + fmt(rows[j].total) + "</b>" +
+        (pct > 0 ? '<span class="bar" style="width:' + w + 'px;"></span>' + pct.toFixed(1) + "%" : "") + "<br>";
+    }
+    brk.innerHTML = html || "";
+  }
+  var dur2 = getTeamDuration();
+  var cards = [["si", "si_summary"], ["ak", "ak_summary"], ["fu", "fu_summary"], ["wo", "wo_summary"]];
+  for (var c = 0; c < cards.length; c++) {
+    var card = el(cards[c][1]);
+    if (!card) { continue; }
+    var numEl = card.querySelectorAll(".sum-card.total .num")[1];
+    if (!numEl) { continue; }
+    var t2 = TEAM[cards[c][0]] ? TEAM[cards[c][0]].getTotal() : 0;
+    numEl.textContent = (dur2 > 0 && t2 > 0) ? fmt(t2 / dur2) : "—";
+  }
+}
+
+/* ===== 丝沃·2丝 模块 ===== */
+var SI = (function () {
+  var PARAM_KEY = "genshinCalcParams";
+  var FEATHER_KEY = "genshinCalcFeathers";
+  var COMBO = "e2aq 223 223 222z 223 22zs23";
+  var A_MULT = { 1: 2.811, 2: 2.535, 3: 1.603 };
+  var A3_HITS = 2;
+  var Z_MULT = 0.943, Z_HITS = 3;
+  var MONSTER_LV = 110;
+  var lastParams = null;
+  var lastTotal = 0;
+
+  function aMultText(n) {
+    var parts = [];
+    for (var i = 1; i <= n; i++) {
+      if (i === 3) { parts.push("A3 160.3%×2"); }
+      else { parts.push("A" + i + " " + Math.round(A_MULT[i] * 1000) / 10 + "%"); }
+    }
+    return parts.join("<br>");
+  }
+  function aTotalMult(n) {
+    var total = 0;
+    for (var i = 1; i <= n; i++) { total += (i === 3) ? A_MULT[i] * A3_HITS : A_MULT[i]; }
+    return total;
+  }
+  function parseCombo(str) {
+    var s = str.replace(/\s+/g, "");
+    var acts = [];
+    var qAfter = false;
+    var i = 0;
+    while (i < s.length) {
+      var ch = s.charAt(i);
+      if (ch === "e") { acts.push({ type: "E", q: qAfter }); i++; }
+      else if (ch === "q") { acts.push({ type: "Q", q: qAfter }); qAfter = true; i++; }
+      else if (ch === "z") { acts.push({ type: "Z", q: qAfter }); i++; }
+      else if (ch === "s") { acts.push({ type: "S", q: qAfter }); i++; }
+      else if (/[0-9]/.test(ch)) {
+        var n = parseInt(ch, 10);
+        if (s.charAt(i + 1) === "a") { i++; }
+        acts.push({ type: "A", n: n, q: qAfter });
+        i++;
+      }
+      else if (ch === "a") { acts.push({ type: "A", n: 1, q: qAfter }); i++; }
+      else { i++; }
+    }
+    return acts;
+  }
+
+  function defaultFeathers() {
+    var counts = {
+      "1": { "1": 1, "2": 1 },
+      "3": { "1": 1, "2": 1 },
+      "4": { "1": 1, "2": 1 },
+      "5": { "1": 1, "2": 1, "3": 2 },
+      "6": { "1": 1, "2": 1 },
+      "7": { "1": 1, "2": 1 },
+      "8": { "1": 1, "2": 1, "3": 2 },
+      "9": { "1": 1, "2": 1 },
+      "10": { "1": 1, "2": 1 },
+      "11": { "1": 0, "2": 0 },
+      "12": { "z": 0 },
+      "13": { "1": 0, "2": 0 },
+      "14": { "1": 0, "2": 0 },
+      "15": { "1": 0, "2": 0, "3": 0 },
+      "16": { "1": 0, "2": 0 },
+      "17": { "1": 0, "2": 0 },
+      "18": { "z": 0 },
+      "20": { "1": 0, "2": 0 },
+      "21": { "1": 0, "2": 0, "3": 0 }
+    };
+    var fiss = {
+      "2": { on: true, feather: 1, count: 3 },
+      "12": { on: true, feather: 0, count: 2 },
+      "18": { on: true, feather: 0, count: 1 }
+    };
+    var tao = { "1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1, "9": 1, "10": 1, "11": 1, "12": 1, "13": 1, "14": 1, "15": 1, "16": 1, "17": 0, "18": 0, "20": 0, "21": 0 };
+    var fur = { "1": 1, "2": 1, "3": 1, "4": 1, "5": 1, "6": 1, "7": 1, "8": 1, "9": 1, "10": 1, "11": 1, "12": 1, "13": 1, "14": 1, "15": 1, "16": 1, "17": 1, "18": 1, "20": 1, "21": 1 };
+    return { counts: counts, fiss: fiss, tao: tao, fur: fur };
+  }
+  function loadFeathers() {
+    var acts = parseCombo(COMBO);
+    var d = defaultFeathers();
+    try {
+      var raw = localStorage.getItem(FEATHER_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data.counts) {
+          for (var k in data.counts) { d.counts[k] = data.counts[k]; }
+          if (data.tao) { for (var tk in data.tao) { d.tao[tk] = data.tao[tk]; } }
+          if (data.fur) { for (var fk in data.fur) { d.fur[fk] = data.fur[fk]; } }
+          if (data.fiss) {
+            if (data.fiss.on !== undefined) {
+              for (var qi = 0; qi < acts.length; qi++) {
+                if (acts[qi].type === "Q") {
+                  d.fiss[qi] = { on: data.fiss.on === true, feather: data.fiss.feather !== undefined ? data.fiss.feather : 1, count: data.fiss.count !== undefined ? data.fiss.count : 1 };
+                  break;
+                }
+              }
+            } else {
+              for (var fi in data.fiss) { d.fiss[fi] = data.fiss[fi]; }
+            }
+          }
+        } else {
+          for (var i2 = 0; i2 < acts.length; i2++) {
+            var a2 = acts[i2];
+            if (data[i2] !== undefined) {
+              var segs = d.counts[i2];
+              for (var s in segs) { segs[s] = data[i2] ? segs[s] : 0; }
+            }
+          }
+        }
+      }
+    } catch (e) { /* 忽略 */ }
+    return d;
+  }
+  function saveFeathers(d) {
+    try { localStorage.setItem(FEATHER_KEY, JSON.stringify(d)); } catch (e) { /* 忽略 */ }
+  }
+
+  function compute(p, f) {
+    var charLv = p.charLv || 90;
+    var baseAtk = p.baseAtk || 0;
+    var atkPct = (p.atkPct || 0) / 100;
+    var smallAtk = p.smallAtk || 0;
+    var flatAtk = p.flatAtk || 0;
+    var dmgBonus = (p.dmgBonus || 0) / 100;
+    var critRate = (p.critRate || 0) / 100;
+    var critDmg = (p.critDmg || 0) / 100;
+    var enemyRes = (p.enemyRes || 0) / 100;
+    var defShred = (p.defShred || 0) / 100;
+    var rawDQ = parseFloat(p.daQuanPct);
+    var daQuanMult = isNaN(rawDQ) ? 1.7 : rawDQ;
+    var daQuan = daQuanMult - 1;
+    var furena = (p.furenaPct || 100) / 100;
+    var dmgBonusNoFur = Math.max(0, dmgBonus - furena);
+    var atkPctNoTao = Math.max(0, atkPct - 0.48);
+    var atkPre = baseAtk * (1 + atkPct) + smallAtk;
+    var atkPreNoTao = baseAtk * (1 + atkPctNoTao) + smallAtk;
+    var atkQ = baseAtk * (1 + atkPct + 0.7) + smallAtk;
+    var atkQNoTao = baseAtk * (1 + atkPctNoTao + 0.7) + smallAtk;
+    var dmgMult = 1 + dmgBonus;
+    var dmgMultNoFur = 1 + dmgBonusNoFur;
+    var dmgMultZ = 1 + dmgBonus - 0.6;
+    var dmgMultZNoFur = 1 + dmgBonusNoFur - 0.6;
+    var dmgMultQ = 1 + dmgBonus + 0.2;
+    var dmgMultQNoFur = 1 + dmgBonusNoFur + 0.2;
+    var qAtkCount = 0;
+    var critMult = 1 + critRate * critDmg;
+    var r = enemyRes;
+    var resMult = r < 0 ? 1 - r / 2 : (r < 0.75 ? 1 - r : 1 / (1 + 4 * r));
+    var defMult = (charLv + 100) / ((charLv + 100) + (MONSTER_LV + 100) * (1 - defShred));
+    var acts = parseCombo(COMBO);
+    var rows = [];
+    var qPreSum = 0, qPostSum = 0;
+    var fc = (f && f.counts) ? f.counts : {};
+    var fissMap = (f && f.fiss) ? f.fiss : {};
+    var taoMap = (f && f.tao) ? f.tao : {};
+    var furMap = (f && f.fur) ? f.fur : {};
+    for (var i = 0; i < acts.length; i++) {
+      var a = acts[i];
+      var row = { idx: i + 1, type: a.type, n: a.n, q: a.q, multText: "", dmgList: [], dmg: 0 };
+      if (a.type === "A") {
+        row.multText = aMultText(a.n);
+        var tao = !!(taoMap[i]);
+        var atk = a.q ? (tao ? atkQ : atkQNoTao) : (tao ? atkPre : atkPreNoTao);
+        var cnts = fc[i] || {};
+        var zoneTxt = a.q ? "Q后" : "Q前";
+        var taoTxt = tao ? "含讨龙48%" : "讨龙失效";
+        var furOn = !!(furMap[i]);
+        var furTxt = furOn ? "含芙宁娜" : "扣芙宁娜" + fmtPct(furena * 100) + "%";
+        var multQ = furOn ? dmgMultQ : dmgMultQNoFur;
+        var multN = furOn ? dmgMult : dmgMultNoFur;
+        var dmgQbTxt = furOn
+          ? "增伤区 1+" + fmtPct(dmgBonus * 100) + "%+20% = " + fmtPct(multQ * 100) + "%（Q 后前 10 次普攻，含芙宁娜）"
+          : "增伤区 1+" + fmtPct(dmgBonusNoFur * 100) + "%+20% = " + fmtPct(multQ * 100) + "%（Q 后前 10 次普攻，扣芙宁娜" + fmtPct(furena * 100) + "%）";
+        var dmgNTxt = furOn
+          ? "增伤区 1+" + fmtPct(dmgBonus * 100) + "% = " + fmtPct(multN * 100) + "%（含芙宁娜）"
+          : "增伤区 1+" + fmtPct(dmgBonusNoFur * 100) + "% = " + fmtPct(multN * 100) + "%（扣芙宁娜" + fmtPct(furena * 100) + "%）";
+        for (var s = 1; s <= a.n; s++) {
+          var segQb = a.q && qAtkCount < 10;
+          if (a.q) { qAtkCount += 1; }
+          var times = (s === 3) ? A3_HITS : 1;
+          var cnt = Math.max(0, cnts[s] || 0);
+          var dmgQbWith = (atk * A_MULT[s] * daQuanMult + flatAtk) * multQ * critMult * resMult * defMult;
+          var dmgQbWo = (atk * A_MULT[s] * daQuanMult) * multQ * critMult * resMult * defMult;
+          var dmgWith = (atk * A_MULT[s] * daQuanMult + flatAtk) * multN * critMult * resMult * defMult;
+          var dmgWo = (atk * A_MULT[s] * daQuanMult) * multN * critMult * resMult * defMult;
+          var grp = {};
+          for (var j = 1; j <= times; j++) {
+            var isQb = segQb;
+            var isFeather = j <= cnt;
+            var key2 = (isQb ? 1 : 0) + "" + (isFeather ? 1 : 0);
+            if (!grp[key2]) { grp[key2] = 0; }
+            grp[key2]++;
+          }
+          var segName = (s === 3) ? "A3 160.3%×2" : "A" + s + " " + Math.round(A_MULT[s] * 1000) / 10 + "%";
+          var aHead = "A" + s + "（" + zoneTxt + "，" + taoTxt + "，" + furTxt + "）\n倍率 " + segName;
+          var aCommon = "攻击区 " + fmt1(atk) + "（" + zoneTxt + "，" + taoTxt + "）\n大权区 ×" + fmt1(daQuanMult) + "\n暴击区 1+" + fmtPct(critRate * 100) + "%×" + fmtPct(critDmg * 100) + "% = " + fmtPct(critMult * 100) + "%\n抗性区 " + fmtPct(resMult * 100) + "%（抗性 " + fmtPct(enemyRes * 100) + "%）\n防御区 " + fmtPct(defMult * 100) + "%";
+          function pushGrp(isQb, isFeather, times2) {
+            if (times2 <= 0) { return; }
+            var dmg = isQb ? (isFeather ? dmgQbWith : dmgQbWo) : (isFeather ? dmgWith : dmgWo);
+            var baseTxt = isFeather ? atk * A_MULT[s] * daQuanMult + flatAtk : atk * A_MULT[s] * daQuanMult;
+            var tip = aHead + "\n" + aCommon + "\n" + (isQb ? dmgQbTxt : dmgNTxt) + "\n羽毛 " + (isFeather ? "前" + cnt + " 次判定 +" + fmt1(flatAtk * cnt) + "（每根 " + fmt1(flatAtk) + "）" : "无") + "\n基础区 " + fmt1(baseTxt) + "\n每段伤害 " + fmt(dmg);
+            row.dmgList.push({ dmg: dmg, times: times2, tip: tip });
+            row.dmg += dmg * times2;
+          }
+          pushGrp(true, true, grp["11"] || 0);
+          pushGrp(true, false, grp["10"] || 0);
+          pushGrp(false, true, grp["01"] || 0);
+          pushGrp(false, false, grp["00"] || 0);
+        }
+      } else if (a.type === "Z") {
+        row.multText = "94.3%×3";
+        var taoZ = !!(taoMap[i]);
+        var atkZ = a.q ? (taoZ ? atkQ : atkQNoTao) : (taoZ ? atkPre : atkPreNoTao);
+        var cntZ = Math.max(0, (fc[i] && fc[i].z) || 0);
+        var furZ = !!(furMap[i]);
+        var multZ = furZ ? dmgMultZ : dmgMultZNoFur;
+        var zMultTxt = furZ
+          ? "增伤区 1+" + fmtPct(dmgBonus * 100) + "%−60% = " + fmtPct(multZ * 100) + "%（含芙宁娜）"
+          : "增伤区 1+" + fmtPct(dmgBonusNoFur * 100) + "%−60% = " + fmtPct(multZ * 100) + "%（扣芙宁娜" + fmtPct(furena * 100) + "%）";
+        var dmgWith = (atkZ * Z_MULT + flatAtk) * multZ * critMult * resMult * defMult;
+        var dmgWo = (atkZ * Z_MULT) * multZ * critMult * resMult * defMult;
+        for (var j2 = 1; j2 <= Z_HITS; j2++) { row.dmg += (j2 <= cntZ) ? dmgWith : dmgWo; }
+        var zoneTxt = a.q ? "Q后" : "Q前";
+        var taoTxt = taoZ ? "含讨龙48%" : "讨龙失效";
+        var zHead = "Z 重击（" + zoneTxt + "，" + taoTxt + "，" + (furZ ? "含芙宁娜" : "扣芙宁娜" + fmtPct(furena * 100) + "%") + "）\n倍率 94.3%×3（不乘大权区）";
+        var zCommon = "攻击区 " + fmt1(atkZ) + "（" + zoneTxt + "，" + taoTxt + "）\n" + zMultTxt + "\n暴击区 1+" + fmtPct(critRate * 100) + "%×" + fmtPct(critDmg * 100) + "% = " + fmtPct(critMult * 100) + "%\n抗性区 " + fmtPct(resMult * 100) + "%（抗性 " + fmtPct(enemyRes * 100) + "%）\n防御区 " + fmtPct(defMult * 100) + "%";
+        if (cntZ > 0) {
+          row.dmgList.push({ dmg: dmgWith, times: cntZ, tip: zHead + "\n" + zCommon + "\n羽毛 前" + cntZ + " 次判定 +" + fmt1(flatAtk * cntZ) + "（每根 " + fmt1(flatAtk) + "）\n基础区 " + fmt1(atkZ * Z_MULT + flatAtk) + "\n每段伤害 " + fmt(dmgWith) });
+        }
+        if (Z_HITS - cntZ > 0) {
+          row.dmgList.push({ dmg: dmgWo, times: Z_HITS - cntZ, tip: zHead + "\n" + zCommon + "\n羽毛 无\n基础区 " + fmt1(atkZ * Z_MULT) + "\n每段伤害 " + fmt(dmgWo) });
+        }
+        var fz = fissMap[i];
+        if (fz && fz.on) {
+          row.multText += "<br>裂隙 500%×" + (fz.count || 1);
+          var fFlat = Math.max(0, fz.feather || 0);
+          var dmgSingle = (atkZ * 5.0 + flatAtk * fFlat) * multZ * critMult * resMult * defMult;
+          var fTip = "裂隙 500%×" + (fz.count || 1) + "（" + zoneTxt + "，" + taoTxt + "）\n倍率 500%（不乘大权区）\n" + zCommon + "\n羽毛 " + (fFlat > 0 ? fFlat + " 根 +" + fmt1(flatAtk * fFlat) : "无") + "\n基础区 " + fmt1(atkZ * 5.0 + flatAtk * fFlat) + "\n每段伤害 " + fmt(dmgSingle);
+          row.dmgList.push({ dmg: dmgSingle, times: fz.count || 1, tip: fTip });
+          row.dmg += dmgSingle * (fz.count || 1);
+        }
+      } else if (a.type === "Q") {
+        var fq = fissMap[i];
+        if (fq && fq.on) {
+          row.multText = "裂隙 500%×" + (fq.count || 1);
+          var fFlatQ = Math.max(0, fq.feather || 0);
+          var taoQ = !!(taoMap[i]);
+          var furQ = !!(furMap[i]);
+          var multZQ = furQ ? dmgMultZ : dmgMultZNoFur;
+          var atkQFiss = taoQ ? atkPre : atkPreNoTao;
+          var dmgSingleQ = (atkQFiss * 5.0 + flatAtk * fFlatQ) * multZQ * critMult * resMult * defMult;
+          var qTip = "裂隙 500%×" + (fq.count || 1) + "（Q前，" + (taoQ ? "含讨龙48%" : "讨龙失效") + "，" + (furQ ? "含芙宁娜" : "扣芙宁娜" + fmtPct(furena * 100) + "%") + "）\n倍率 500%（不乘大权区）\n攻击区 " + fmt1(atkQFiss) + "（Q前，" + (taoQ ? "含讨龙48%" : "讨龙失效") + "）\n羽毛 " + (fFlatQ > 0 ? fFlatQ + " 根 +" + fmt1(flatAtk * fFlatQ) : "无") + "\n增伤区 1+" + fmtPct((furQ ? dmgBonus : dmgBonusNoFur) * 100) + "%−60% = " + fmtPct(multZQ * 100) + "%（" + (furQ ? "含芙宁娜" : "扣芙宁娜" + fmtPct(furena * 100) + "%") + "）\n暴击区 1+" + fmtPct(critRate * 100) + "%×" + fmtPct(critDmg * 100) + "% = " + fmtPct(critMult * 100) + "%\n抗性区 " + fmtPct(resMult * 100) + "%（抗性 " + fmtPct(enemyRes * 100) + "%）\n防御区 " + fmtPct(defMult * 100) + "%\n基础区 " + fmt1(atkQFiss * 5.0 + flatAtk * fFlatQ) + "\n每段伤害 " + fmt(dmgSingleQ);
+          row.dmgList.push({ dmg: dmgSingleQ, times: fq.count || 1, tip: qTip });
+          row.dmg = dmgSingleQ * (fq.count || 1);
+        } else {
+          row.multText = "—";
+        }
+      } else {
+        row.multText = "—";
+      }
+      if (row.dmg > 0) {
+        if (a.q) { qPostSum += row.dmg; } else { qPreSum += row.dmg; }
+      }
+      rows.push(row);
+    }
+    var total = qPreSum + qPostSum;
+    return {
+      rows: rows, qPreSum: qPreSum, qPostSum: qPostSum, total: total,
+      atkPre: atkPre, atkQ: atkQ, dmgMult: dmgMult, critMult: critMult, resMult: resMult, defMult: defMult, baseAtk: baseAtk, atkPct: atkPct,
+      daQuan: daQuan, daQuanMult: daQuanMult, dmgMultZ: dmgMultZ, dmgMultQ: dmgMultQ,
+      furena: furena, dmgBonusNoFur: dmgBonusNoFur,
+      smallAtk: smallAtk, flatAtk: flatAtk, dmgBonus: dmgBonus, critRate: critRate, critDmg: critDmg,
+      enemyRes: enemyRes, defShred: defShred, charLv: charLv
+    };
+  }
+
+  function fissToggleHtml(i, f) {
+    return '<label class="fiss-toggle' + (f.on ? " on" : "") + '"><input type="checkbox" data-fiss="on" data-idx="' + i + '"' + (f.on ? " checked" : "") + '><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-12h-7l1-8z"/></svg><span class="fiss-txt">裂隙 <b>500%</b></span></label>';
+  }
+  function fissSetHtml(i, f) {
+    var v = Math.min(f.feather || 1, 1);
+    return '<span class="fiss-set"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V9M10 19V4M16 19v-7M22 19H2"/></svg><span class="fseg">羽 <input type="number" min="0" max="1" step="1" data-fiss="feather" data-idx="' + i + '" value="' + v + '"></span></span>';
+  }
+  function fissLineHtml(i, f) {
+    return '<span class="fiss-line">裂隙 500% × <input type="number" class="fiss-inline" min="1" max="99" step="1" data-fiss="count" data-idx="' + i + '" value="' + (f.count || 1) + '"></span>';
+  }
+
+  function updateFeatherSummary() {
+    var data = loadFeathers();
+    var used = 0;
+    for (var i in data.counts) {
+      var segs = data.counts[i];
+      for (var s in segs) {
+        if (s === "z") { used += Math.min(segs[s], 3); }
+        else if (s === "3") { used += Math.min(segs[s], 2); }
+        else { used += Math.min(segs[s], 1); }
+      }
+    }
+    for (var fi in data.fiss) {
+      var f = data.fiss[fi];
+      if (f.on) { used += Math.max(0, f.feather || 0) * Math.max(1, f.count || 1); }
+    }
+    var elx = el("si_featherSummary");
+    if (!elx) { return; }
+    var times = readNum("si_featherTimes");
+    if (times > 0) {
+      elx.innerHTML = "羽毛已分配 <b>" + used + "</b> 次 / 上限 " + times + " 次" + (used > times ? "（超出 " + (used - times) + " 次）" : "");
+      elx.className = "feather-sum" + (used > times ? " over" : "");
+    } else {
+      elx.innerHTML = "羽毛已分配 <b>" + used + "</b> 次（未设上限）";
+      elx.className = "feather-sum";
+    }
+  }
+
+  function buildRows() {
+    var acts = parseCombo(COMBO);
+    var data = loadFeathers();
+    var body = el("si_detailBody");
+    if (!body) { return; }
+    var html = "";
+    for (var i = 0; i < acts.length; i++) {
+      var a = acts[i];
+      var stage, cls;
+      if (a.type === "E") { stage = "Q前"; cls = "nodmg"; }
+      else if (a.type === "Q") { stage = "释放"; cls = "nodmg"; }
+      else if (a.type === "S") { stage = "—"; cls = "nodmg"; }
+      else { stage = a.q ? "Q后" : "Q前"; cls = a.q ? "q-post" : "q-pre"; }
+      var fcol = "", multText = "—", multCls = "nodmg", dmgCls = "nodmg";
+      var taoOn = !!(data.tao && data.tao[i]);
+      var taoCell = (a.type === "E" || a.type === "S")
+        ? "—"
+        : '<label class="tao-box"><input type="checkbox" data-tao="1" data-idx="' + i + '"' + (taoOn ? " checked" : "") + '></label>';
+      var furOn = !!(data.fur && data.fur[i]);
+      var furCell = (a.type === "E" || a.type === "S")
+        ? "—"
+        : '<label class="tao-box"><input type="checkbox" data-fur="1" data-idx="' + i + '"' + (furOn ? " checked" : "") + '></label>';
+      if (a.type === "A") {
+        for (var s = 1; s <= a.n; s++) {
+          var maxV = (s === 3) ? 2 : 1;
+          var val = (data.counts[i] && data.counts[i][s] !== undefined) ? data.counts[i][s] : maxV;
+          fcol += '<span class="fseg">A' + s + ' <input type="number" min="0" max="' + maxV + '" step="1" data-idx="' + i + '" data-seg="' + s + '" value="' + val + '"></span>';
+        }
+        multText = aMultText(a.n);
+        multCls = "";
+      } else if (a.type === "Z") {
+        var zval = (data.counts[i] && data.counts[i].z !== undefined) ? data.counts[i].z : 3;
+        var fz = data.fiss[i] || { on: false, feather: 1, count: 1 };
+        fcol = '<span class="fseg">Z <input type="number" min="0" max="3" step="1" data-idx="' + i + '" data-seg="z" value="' + zval + '"></span>';
+        fcol += fissToggleHtml(i, fz);
+        if (fz.on) { fcol += fissSetHtml(i, fz); }
+        multText = "94.3%×3" + (fz.on ? "<br>" + fissLineHtml(i, fz) : "");
+        multCls = "";
+      } else if (a.type === "Q") {
+        var f = data.fiss[i] || { on: false, feather: 1, count: 1 };
+        fcol = fissToggleHtml(i, f);
+        if (f.on) {
+          fcol += fissSetHtml(i, f);
+          multText = fissLineHtml(i, f);
+          multCls = "";
+          dmgCls = "q-post";
+        }
+      }
+      html += "<tr data-idx=\"" + i + "\">" +
+        "<td>" + (i + 1) + "</td>" +
+        "<td class=\"fcol\">" + (fcol || "—") + "</td>" +
+        "<td><b>" + (a.type === "A" ? a.n + "A" : a.type) + "</b></td>" +
+        "<td class=\"taoc\">" + taoCell + "</td>" +
+        "<td class=\"taoc\">" + furCell + "</td>" +
+        "<td class=\"" + multCls + "\">" + multText + "</td>" +
+        "<td class=\"" + cls + "\">" + stage + "</td>" +
+        "<td class=\"num " + dmgCls + "\">—</td>" +
+        "</tr>";
+    }
+    body.innerHTML = html;
+    updateFeatherSummary();
+  }
+
+  function handleDetailChange(e) {
+    var t = e.target;
+    if (!t) { return; }
+    var data = loadFeathers();
+    if (t.dataset && t.dataset.idx !== undefined && t.dataset.seg !== undefined) {
+      var idx = t.dataset.idx, seg = t.dataset.seg;
+      if (!data.counts[idx]) { data.counts[idx] = {}; }
+      data.counts[idx][seg] = Math.max(0, parseInt(t.value, 10) || 0);
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.tao !== undefined && t.dataset.idx !== undefined) {
+      var idxT = t.dataset.idx;
+      if (!data.tao) { data.tao = {}; }
+      data.tao[idxT] = t.checked ? 1 : 0;
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.fur !== undefined && t.dataset.idx !== undefined) {
+      var idxF = t.dataset.idx;
+      if (!data.fur) { data.fur = {}; }
+      data.fur[idxF] = t.checked ? 1 : 0;
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.fiss !== undefined && t.dataset.idx !== undefined) {
+      var idxZ = t.dataset.idx;
+      if (!data.fiss[idxZ]) { data.fiss[idxZ] = { on: false, feather: 1, count: 1 }; }
+      var key = t.dataset.fiss;
+      if (key === "on") { data.fiss[idxZ].on = t.checked; }
+      else if (key === "count") { data.fiss[idxZ].count = Math.max(1, parseInt(t.value, 10) || 1); }
+      else if (key === "feather") { data.fiss[idxZ].feather = Math.min(1, Math.max(0, parseInt(t.value, 10) || 0)); }
+      saveFeathers(data);
+      if (key === "on") { buildRows(); }
+    }
+    if (lastParams) { render(compute(lastParams, loadFeathers())); }
+  }
+
+  function render(res) {
+    lastTotal = res.total;
+    var dur = getTeamDuration();
+    el("si_summary").innerHTML =
+      '<div class="sum-card total"><div class="lbl">丝总伤</div><div class="num">' + fmt(res.total) + '</div></div>' +
+      '<div class="sum-card total"><div class="lbl">丝 DPS</div><div class="num">' + (dur > 0 ? fmt(res.total / dur) : "—") + '</div></div>' +
+      '<div class="sum-card"><div class="lbl">Q 前</div><div class="num">' + fmt(res.qPreSum) + '</div></div>' +
+      '<div class="sum-card"><div class="lbl">Q 后</div><div class="num">' + fmt(res.qPostSum) + '</div></div>';
+    var body = el("si_detailBody");
+    for (var i = 0; i < res.rows.length; i++) {
+      var r = res.rows[i];
+      var tr = body.querySelector('tr[data-idx="' + i + '"]');
+      if (!tr) { continue; }
+      var td = tr.querySelector("td.num");
+      var cls = r.dmg > 0 ? ((r.type === "Q" || r.q) ? "q-post" : "q-pre") : "nodmg";
+      td.className = "num " + cls;
+      td.innerHTML = r.dmgList.length ? r.dmgList.map(function (o) {
+        return '<span class="dmg-tip" data-tip="' + escAttr(o.tip || "") + '">' + fmt(o.dmg) + (o.times > 1 ? " × " + o.times : "") + '</span>';
+      }).join("<br>") : "—";
+    }
+    updateTeam();
+  }
+
+  function updateMultLine() {
+    var elx = el("si_totalMultLine");
+    if (!elx) { return; }
+    var acts = parseCombo(COMBO);
+    var total = 0;
+    for (var i = 0; i < acts.length; i++) {
+      var a = acts[i];
+      if (a.type === "A") { total += aTotalMult(a.n); }
+      else if (a.type === "Z") { total += Z_MULT * Z_HITS; }
+    }
+    elx.textContent = "总倍率（不含 Q 的 70% 攻击）：" + (Math.round(total * 1000) / 10) + "%";
+  }
+
+  function saveParams() {
+    var data = {
+      charLv: el("si_charLv").value, baseAtk: el("si_baseAtk").value, atkPct: el("si_atkPct").value,
+      smallAtk: el("si_smallAtk").value, flatAtk: el("si_flatAtk").value, featherTimes: el("si_featherTimes").value,
+      daQuanPct: el("si_daQuanPct").value, dmgBonus: el("si_dmgBonus").value, furenaPct: el("si_furenaPct").value,
+      critRate: el("si_critRate").value, critDmg: el("si_critDmg").value, enemyRes: el("si_enemyRes").value,
+      defShred: el("si_defShred").value
+    };
+    try { localStorage.setItem(PARAM_KEY, JSON.stringify(data)); } catch (e) { /* 忽略 */ }
+  }
+  function restoreParams() {
+    var raw = null;
+    try { raw = localStorage.getItem(PARAM_KEY); } catch (e) { return; }
+    if (!raw) { return; }
+    try {
+      var data = JSON.parse(raw);
+      if (data.charLv !== undefined) { el("si_charLv").value = data.charLv; }
+      if (data.baseAtk !== undefined) { el("si_baseAtk").value = data.baseAtk; }
+      if (data.atkPct !== undefined) { el("si_atkPct").value = data.atkPct; }
+      if (data.smallAtk !== undefined) { el("si_smallAtk").value = data.smallAtk; }
+      if (data.flatAtk !== undefined) { var _fa = parseFloat(data.flatAtk); el("si_flatAtk").value = isNaN(_fa) ? 3500 : data.flatAtk; }
+      if (data.featherTimes !== undefined) { var _ft = parseFloat(data.featherTimes); el("si_featherTimes").value = isNaN(_ft) ? 25 : data.featherTimes; }
+      if (data.daQuanPct !== undefined) {
+        var dq = parseFloat(data.daQuanPct);
+        if (!isNaN(dq) && dq > 10) { dq = 1 + dq / 100; }
+        el("si_daQuanPct").value = isNaN(dq) ? 1.7 : dq;
+      }
+      if (data.dmgBonus !== undefined) { el("si_dmgBonus").value = data.dmgBonus; }
+      if (data.furenaPct !== undefined) { var _fu = parseFloat(data.furenaPct); el("si_furenaPct").value = isNaN(_fu) ? 100 : data.furenaPct; }
+      if (data.critRate !== undefined) { el("si_critRate").value = data.critRate; }
+      if (data.critDmg !== undefined) { el("si_critDmg").value = data.critDmg; }
+      if (data.enemyRes !== undefined) { el("si_enemyRes").value = data.enemyRes; }
+      if (data.defShred !== undefined) { el("si_defShred").value = data.defShred; }
+    } catch (e) { /* 忽略 */ }
+  }
+  function onCalc() {
+    var p = {
+      charLv: parseFloat(el("si_charLv").value) || 90,
+      baseAtk: parseFloat(el("si_baseAtk").value) || 0,
+      atkPct: parseFloat(el("si_atkPct").value) || 0,
+      smallAtk: parseFloat(el("si_smallAtk").value) || 0,
+      flatAtk: parseFloat(el("si_flatAtk").value) || 0,
+      featherTimes: parseFloat(el("si_featherTimes").value) || 0,
+      daQuanPct: (function () { var v = parseFloat(el("si_daQuanPct").value); return isNaN(v) ? 1.7 : v; })(),
+      dmgBonus: parseFloat(el("si_dmgBonus").value) || 0,
+      furenaPct: parseFloat(el("si_furenaPct").value) || 100,
+      critRate: parseFloat(el("si_critRate").value) || 0,
+      critDmg: parseFloat(el("si_critDmg").value) || 0,
+      enemyRes: parseFloat(el("si_enemyRes").value) || 0,
+      defShred: parseFloat(el("si_defShred").value) || 0
+    };
+    if (p.baseAtk <= 0) { alert("丝沃·2丝：请填写基础攻击力（白值）"); return; }
+    lastParams = p;
+    render(compute(p, loadFeathers()));
+  }
+  function bind() {
+    el("si_calcBtn").addEventListener("click", onCalc);
+    el("si_detailBody").addEventListener("change", handleDetailChange);
+    el("si_detailBody").addEventListener("click", function (e) {
+      var t = e.target;
+      if (t && t.dataset && t.dataset.fiss === "on" && t.type === "checkbox") { handleDetailChange(e); }
+    });
+    var ids = ["si_charLv", "si_baseAtk", "si_atkPct", "si_smallAtk", "si_flatAtk", "si_featherTimes", "si_daQuanPct", "si_dmgBonus", "si_furenaPct", "si_critRate", "si_critDmg", "si_enemyRes", "si_defShred"];
+    for (var i = 0; i < ids.length; i++) {
+      el(ids[i]).addEventListener("input", function () { saveParams(); if (lastParams) { render(compute(lastParams, loadFeathers())); } });
+    }
+    el("si_featherTimes").addEventListener("input", updateFeatherSummary);
+  }
+  return {
+    init: function () { restoreParams(); updateMultLine(); bind(); buildRows(); },
+    onCalc: onCalc,
+    getTotal: function () { return lastTotal; },
+    defaultParams: function () {
+      return { charLv: "", baseAtk: "1033", atkPct: "", smallAtk: "", flatAtk: "3500", featherTimes: "25", daQuanPct: "1.7", dmgBonus: "", furenaPct: "100", critRate: "", critDmg: "", enemyRes: "", defShred: "0" };
+    },
+    defaultFeathers: defaultFeathers,
+    paramKey: PARAM_KEY, featherKey: FEATHER_KEY
+  };
+})();
+TEAM.si = SI;
+
+/* ===== 爱可菲 模块 ===== */
+var AK = (function () {
+  var PARAM_KEY = "aikefeiCalcParams";
+  var FEATHER_KEY = "aikefeiCalcFeathers";
+  var MONSTER_LV = 110;
+  var E_MULT = 2.28;
+  var ACTS = [{ type: "E" }, { type: "Q" }];
+  var lastParams = null;
+  var lastTotal = 0;
+
+  function defaultFeathers() {
+    return { counts: { 0: { 1: 0 }, 1: { 1: 0 } }, tao: { 0: 1, 1: 1 }, fur: { 0: 1, 1: 1 }, qOn: { 1: 1 } };
+  }
+  function loadFeathers() {
+    var d = defaultFeathers();
+    try {
+      var raw = localStorage.getItem(FEATHER_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data.counts) {
+          for (var k in data.counts) { d.counts[k] = data.counts[k]; }
+          if (data.tao) { for (var tk in data.tao) { d.tao[tk] = data.tao[tk]; } }
+          if (data.fur) { for (var fk in data.fur) { d.fur[fk] = data.fur[fk]; } }
+          if (data.qOn) { for (var qk in data.qOn) { d.qOn[qk] = data.qOn[qk]; } }
+        }
+      }
+    } catch (e) { /* 忽略 */ }
+    return d;
+  }
+  function saveFeathers(d) {
+    try { localStorage.setItem(FEATHER_KEY, JSON.stringify(d)); } catch (e) { /* 忽略 */ }
+  }
+
+  function compute(p, f) {
+    var charLv = p.charLv || 90;
+    var baseAtk = p.baseAtk || 0;
+    var atkPct = (p.atkPct || 0) / 100;
+    var smallAtk = p.smallAtk || 0;
+    var flatAtk = p.flatAtk || 0;
+    var dmgBonus = (p.dmgBonus || 0) / 100;
+    var critRate = (p.critRate || 0) / 100;
+    var critDmg = (p.critDmg || 0) / 100;
+    var enemyRes = (p.enemyRes || 0) / 100;
+    var defShred = (p.defShred || 0) / 100;
+    var eHits = Math.max(1, parseInt(p.eHits, 10) || 20);
+    var qMult = (p.qMultPct || 0) / 100;
+    var furena = (p.furenaPct || 100) / 100;
+    var dmgBonusNoFur = Math.max(0, dmgBonus - furena);
+    var atkPctNoTao = Math.max(0, atkPct - 0.48);
+    var atk = baseAtk * (1 + atkPct) + smallAtk;
+    var atkNoTao = baseAtk * (1 + atkPctNoTao) + smallAtk;
+    var dmgMult = 1 + dmgBonus;
+    var dmgMultNoFur = 1 + dmgBonusNoFur;
+    var critMult = 1 + critRate * critDmg;
+    var r = enemyRes;
+    var resMult = r < 0 ? 1 - r / 2 : (r < 0.75 ? 1 - r : 1 / (1 + 4 * r));
+    var defMult = (charLv + 100) / ((charLv + 100) + (MONSTER_LV + 100) * (1 - defShred));
+    var rows = [];
+    var fc = (f && f.counts) ? f.counts : {};
+    var taoMap = (f && f.tao) ? f.tao : {};
+    var furMap = (f && f.fur) ? f.fur : {};
+    var qOnMap = (f && f.qOn) ? f.qOn : {};
+    for (var i = 0; i < ACTS.length; i++) {
+      var a = ACTS[i];
+      var row = { idx: i + 1, type: a.type, multText: "", dmgList: [], dmg: 0 };
+      if (a.type === "E") {
+        var tao = !!(taoMap[i]);
+        var atkUse = tao ? atk : atkNoTao;
+        var cnt = Math.min(Math.max(0, (fc[i] && fc[i]["1"]) || 0), eHits);
+        var furOn = !!(furMap[i]);
+        var mult = furOn ? dmgMult : dmgMultNoFur;
+        var dmgWith = (atkUse * E_MULT + flatAtk) * mult * critMult * resMult * defMult;
+        var dmgWo = (atkUse * E_MULT) * mult * critMult * resMult * defMult;
+        var taoTxt = tao ? "含讨龙48%" : "讨龙失效";
+        var furTxt = furOn ? "含芙宁娜" : "扣芙宁娜" + fmtPct(furena * 100) + "%";
+        var multTxt = furOn
+          ? "增伤区 1+" + fmtPct(dmgBonus * 100) + "% = " + fmtPct(mult * 100) + "%（含芙宁娜）"
+          : "增伤区 1+" + fmtPct(dmgBonusNoFur * 100) + "% = " + fmtPct(mult * 100) + "%（扣芙宁娜" + fmtPct(furena * 100) + "%）";
+        var eHead = "E 机关（" + taoTxt + "，" + furTxt + "）\n倍率 228%×" + eHits;
+        var eCommon = "攻击区 " + fmt1(atkUse) + "（" + taoTxt + "）\n" + multTxt + "\n暴击区 1+" + fmtPct(critRate * 100) + "%×" + fmtPct(critDmg * 100) + "% = " + fmtPct(critMult * 100) + "%\n抗性区 " + fmtPct(resMult * 100) + "%（抗性 " + fmtPct(enemyRes * 100) + "%）\n防御区 " + fmtPct(defMult * 100) + "%";
+        if (cnt > 0) {
+          row.dmgList.push({ dmg: dmgWith, times: cnt, tip: eHead + "\n" + eCommon + "\n羽毛 前" + cnt + " 段 +" + fmt1(flatAtk * cnt) + "（每根 " + fmt1(flatAtk) + "）\n基础区 " + fmt1(atkUse * E_MULT + flatAtk) + "\n每段伤害 " + fmt(dmgWith) });
+        }
+        if (eHits - cnt > 0) {
+          row.dmgList.push({ dmg: dmgWo, times: eHits - cnt, tip: eHead + "\n" + eCommon + "\n羽毛 无\n基础区 " + fmt1(atkUse * E_MULT) + "\n每段伤害 " + fmt(dmgWo) });
+        }
+        row.dmg = dmgWith * cnt + dmgWo * (eHits - cnt);
+        row.multText = "228%×" + eHits;
+      } else if (a.type === "Q") {
+        var qOn = !!(qOnMap[i]);
+        if (qOn && qMult > 0) {
+          var cntQ = Math.max(0, Math.min(1, (fc[i] && fc[i]["1"]) || 0));
+          var qTao = !!(taoMap[i]);
+          var atkQ = qTao ? atk : atkNoTao;
+          var qFur = !!(furMap[i]);
+          var multQ = qFur ? dmgMult : dmgMultNoFur;
+          var dmgQw = (atkQ * qMult + flatAtk) * multQ * critMult * resMult * defMult;
+          var dmgQo = (atkQ * qMult) * multQ * critMult * resMult * defMult;
+          var qTaoTxt = qTao ? "含讨龙48%" : "讨龙失效";
+          var qFurTxt = qFur ? "含芙宁娜" : "扣芙宁娜" + fmtPct(furena * 100) + "%";
+          var qMultTxt = qFur
+            ? "增伤区 1+" + fmtPct(dmgBonus * 100) + "% = " + fmtPct(multQ * 100) + "%（含芙宁娜）"
+            : "增伤区 1+" + fmtPct(dmgBonusNoFur * 100) + "% = " + fmtPct(multQ * 100) + "%（扣芙宁娜" + fmtPct(furena * 100) + "%）";
+          var qHead = "Q 爆发（" + qTaoTxt + "，" + qFurTxt + "）\n倍率 " + fmtMult(qMult * 100) + "×1";
+          var qCommon = "攻击区 " + fmt1(atkQ) + "（" + qTaoTxt + "）\n" + qMultTxt + "\n暴击区 1+" + fmtPct(critRate * 100) + "%×" + fmtPct(critDmg * 100) + "% = " + fmtPct(critMult * 100) + "%\n抗性区 " + fmtPct(resMult * 100) + "%（抗性 " + fmtPct(enemyRes * 100) + "%）\n防御区 " + fmtPct(defMult * 100) + "%";
+          if (cntQ > 0) {
+            row.dmgList.push({ dmg: dmgQw, times: 1, tip: qHead + "\n" + qCommon + "\n羽毛 1 根 +" + fmt1(flatAtk) + "\n基础区 " + fmt1(atkQ * qMult + flatAtk) + "\n伤害 " + fmt(dmgQw) });
+            row.dmg = dmgQw;
+          } else {
+            row.dmgList.push({ dmg: dmgQo, times: 1, tip: qHead + "\n" + qCommon + "\n羽毛 无\n基础区 " + fmt1(atkQ * qMult) + "\n伤害 " + fmt(dmgQo) });
+            row.dmg = dmgQo;
+          }
+          row.multText = fmtMult(qMult * 100) + "×1";
+        } else {
+          row.multText = "未启用";
+        }
+      }
+      rows.push(row);
+    }
+    var total = 0;
+    for (var k = 0; k < rows.length; k++) { total += rows[k].dmg; }
+    return { rows: rows, total: total, eTotal: rows[0] ? rows[0].dmg : 0, qTotal: rows[1] ? rows[1].dmg : 0, flatAtk: flatAtk, eHits: eHits, qMultPct: p.qMultPct || 0, furena: furena, dmgBonus: dmgBonus, dmgBonusNoFur: dmgBonusNoFur, critMult: critMult, critRate: critRate, critDmg: critDmg, resMult: resMult, defMult: defMult, enemyRes: enemyRes, charLv: charLv };
+  }
+
+  function updateFeatherSummary() {
+    var data = loadFeathers();
+    var used = 0;
+    var hits = Math.max(1, parseInt(el("ak_eHits").value, 10) || 20);
+    if (data.counts && data.counts[0] && data.counts[0]["1"]) { used = Math.min(data.counts[0]["1"], hits); }
+    if (data.counts && data.counts[1] && data.counts[1]["1"]) { used += Math.min(data.counts[1]["1"], 1); }
+    var elx = el("ak_featherSummary");
+    if (!elx) { return; }
+    var times = readNum("ak_featherTimes");
+    if (times > 0) {
+      elx.innerHTML = "羽毛已分配 <b>" + used + "</b> 次 / 上限 " + times + " 次" + (used > times ? "（超出 " + (used - times) + " 次）" : "");
+      elx.className = "feather-sum" + (used > times ? " over" : "");
+    } else {
+      elx.innerHTML = "羽毛已分配 <b>" + used + "</b> 次（未设上限）";
+      elx.className = "feather-sum";
+    }
+  }
+
+  function buildRows() {
+    var body = el("ak_detailBody");
+    if (!body) { return; }
+    var data = loadFeathers();
+    var hits = Math.max(1, parseInt(el("ak_eHits").value, 10) || 20);
+    var val = (data.counts[0] && data.counts[0]["1"] !== undefined) ? Math.min(data.counts[0]["1"], hits) : 0;
+    var fcol = '<span class="fseg">E 前 <input type="number" min="0" max="' + hits + '" step="1" data-idx="0" data-seg="1" value="' + val + '"></span> 段吃羽';
+    var taoOn = !!(data.tao && data.tao[0]);
+    var taoCell = '<label class="tao-box"><input type="checkbox" data-tao="1" data-idx="0"' + (taoOn ? " checked" : "") + '></label>';
+    var furOn = !!(data.fur && data.fur[0]);
+    var furCell = '<label class="tao-box"><input type="checkbox" data-fur="1" data-idx="0"' + (furOn ? " checked" : "") + '></label>';
+    var html = "<tr data-idx=\"0\">" +
+      "<td>1</td>" +
+      "<td class=\"fcol\">" + fcol + "</td>" +
+      "<td><b>E</b></td>" +
+      "<td class=\"taoc\">" + taoCell + "</td>" +
+      "<td class=\"taoc\">" + furCell + "</td>" +
+      "<td>228%×" + hits + "</td>" +
+      "<td class=\"q-post\">后台</td>" +
+      "<td class=\"num\">—</td>" +
+      "</tr>";
+    var qOn = !!(data.qOn && data.qOn[1]);
+    var qVal = (data.counts[1] && data.counts[1]["1"] !== undefined) ? Math.min(data.counts[1]["1"], 1) : 0;
+    var qMultPct = parseFloat(el("ak_qMultPct").value);
+    var qMultTxt = isNaN(qMultPct) ? "—" : fmtMult(qMultPct) + "×1";
+    var qfcol = '<label class="fiss-toggle' + (qOn ? " on" : "") + '" data-qon="1" data-idx="1" title="点击开关 Q 爆发">' +
+      '<input type="checkbox" data-qon="1" data-idx="1"' + (qOn ? " checked" : "") + '>' +
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-12h-7l1-8z"/></svg>' +
+      '<span class="fiss-txt">启用</span></label>' +
+      '<span class="fseg">Q 羽 <input type="number" min="0" max="1" step="1" data-idx="1" data-seg="1" value="' + qVal + '"></span>';
+    var qTaoOn = !!(data.tao && data.tao[1]);
+    var qTaoCell = '<label class="tao-box"><input type="checkbox" data-tao="1" data-idx="1"' + (qTaoOn ? " checked" : "") + '></label>';
+    var qFurOn = !!(data.fur && data.fur[1]);
+    var qFurCell = '<label class="tao-box"><input type="checkbox" data-fur="1" data-idx="1"' + (qFurOn ? " checked" : "") + '></label>';
+    html += "<tr data-idx=\"1\">" +
+      "<td>2</td>" +
+      "<td class=\"fcol\">" + qfcol + "</td>" +
+      "<td><b>Q</b></td>" +
+      "<td class=\"taoc\">" + qTaoCell + "</td>" +
+      "<td class=\"taoc\">" + qFurCell + "</td>" +
+      "<td>" + qMultTxt + "</td>" +
+      "<td class=\"q-post\">爆发</td>" +
+      "<td class=\"num\">—</td>" +
+      "</tr>";
+    body.innerHTML = html;
+    updateFeatherSummary();
+  }
+
+  function handleDetailChange(e) {
+    var t = e.target;
+    if (!t) { return; }
+    var data = loadFeathers();
+    if (t.dataset && t.dataset.idx !== undefined && t.dataset.seg !== undefined) {
+      var idx = t.dataset.idx, seg = t.dataset.seg;
+      if (!data.counts[idx]) { data.counts[idx] = {}; }
+      data.counts[idx][seg] = Math.max(0, parseInt(t.value, 10) || 0);
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.tao !== undefined && t.dataset.idx !== undefined) {
+      var idxT = t.dataset.idx;
+      if (!data.tao) { data.tao = {}; }
+      data.tao[idxT] = t.checked ? 1 : 0;
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.fur !== undefined && t.dataset.idx !== undefined) {
+      var idxF = t.dataset.idx;
+      if (!data.fur) { data.fur = {}; }
+      data.fur[idxF] = t.checked ? 1 : 0;
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.qon !== undefined && t.dataset.idx !== undefined) {
+      var idxQ = t.dataset.idx;
+      if (!data.qOn) { data.qOn = {}; }
+      data.qOn[idxQ] = t.checked ? 1 : 0;
+      saveFeathers(data);
+      updateMultLine();
+    }
+    if (lastParams) { render(compute(lastParams, loadFeathers())); }
+    updateFeatherSummary();
+  }
+
+  function render(res) {
+    lastTotal = res.total;
+    var dur = getTeamDuration();
+    el("ak_summary").innerHTML =
+      '<div class="sum-card total"><div class="lbl">爱可菲总伤</div><div class="num">' + fmt(res.total) + '</div></div>' +
+      '<div class="sum-card total"><div class="lbl">爱可菲 DPS</div><div class="num">' + (dur > 0 ? fmt(res.total / dur) : "—") + '</div></div>' +
+      '<div class="sum-card"><div class="lbl">E 机关</div><div class="num">' + fmt(res.eTotal) + '</div></div>' +
+      '<div class="sum-card"><div class="lbl">Q 爆发</div><div class="num">' + fmt(res.qTotal) + '</div></div>';
+    var body = el("ak_detailBody");
+    for (var i = 0; i < res.rows.length; i++) {
+      var r = res.rows[i];
+      var tr = body.querySelector('tr[data-idx="' + i + '"]');
+      if (!tr) { continue; }
+      var td = tr.querySelector("td.num");
+      var cls = r.dmg > 0 ? "q-post" : "nodmg";
+      td.className = "num " + cls;
+      td.innerHTML = r.dmgList.length ? r.dmgList.map(function (o) {
+        return '<span class="dmg-tip" data-tip="' + escAttr(o.tip || "") + '">' + fmt(o.dmg) + (o.times > 1 ? " × " + o.times : "") + '</span>';
+      }).join("<br>") : "—";
+    }
+    updateTeam();
+  }
+
+  function updateMultLine() {
+    var elx = el("ak_totalMultLine");
+    if (!elx) { return; }
+    var hits = Math.max(1, parseInt(el("ak_eHits").value, 10) || 20);
+    var qMultPct = parseFloat(el("ak_qMultPct").value);
+    var qMult = isNaN(qMultPct) ? 0 : qMultPct / 100;
+    var data = loadFeathers();
+    var qOn = !!(data.qOn && data.qOn[1]);
+    var total = E_MULT * hits + (qOn ? qMult : 0);
+    elx.textContent = "总倍率：" + fmtMult(total) + "（228%×" + hits + " 段" + (qOn ? " + Q " + fmtMult(qMult * 100) : "") + "）";
+  }
+  function saveParams() {
+    var data = {
+      charLv: el("ak_charLv").value, baseAtk: el("ak_baseAtk").value, atkPct: el("ak_atkPct").value,
+      smallAtk: el("ak_smallAtk").value, flatAtk: el("ak_flatAtk").value, featherTimes: el("ak_featherTimes").value,
+      eHits: el("ak_eHits").value, qMultPct: el("ak_qMultPct").value,
+      dmgBonus: el("ak_dmgBonus").value, furenaPct: el("ak_furenaPct").value,
+      critRate: el("ak_critRate").value, critDmg: el("ak_critDmg").value,
+      enemyRes: el("ak_enemyRes").value, defShred: el("ak_defShred").value
+    };
+    try { localStorage.setItem(PARAM_KEY, JSON.stringify(data)); } catch (e) { /* 忽略 */ }
+  }
+  function restoreParams() {
+    var raw = null;
+    try { raw = localStorage.getItem(PARAM_KEY); } catch (e) { return; }
+    if (!raw) { return; }
+    try {
+      var data = JSON.parse(raw);
+      if (data.charLv !== undefined) { el("ak_charLv").value = data.charLv; }
+      if (data.baseAtk !== undefined) { el("ak_baseAtk").value = data.baseAtk; }
+      if (data.atkPct !== undefined) { el("ak_atkPct").value = data.atkPct; }
+      if (data.smallAtk !== undefined) { el("ak_smallAtk").value = data.smallAtk; }
+      if (data.flatAtk !== undefined) { var _fa = parseFloat(data.flatAtk); el("ak_flatAtk").value = isNaN(_fa) ? 3500 : data.flatAtk; }
+      if (data.featherTimes !== undefined) { var _ft = parseFloat(data.featherTimes); el("ak_featherTimes").value = isNaN(_ft) ? 0 : data.featherTimes; }
+      if (data.eHits !== undefined) { var _eh = parseInt(data.eHits, 10); el("ak_eHits").value = isNaN(_eh) ? 20 : data.eHits; }
+      if (data.qMultPct !== undefined) { var _qm = parseFloat(data.qMultPct); el("ak_qMultPct").value = isNaN(_qm) ? 1067.04 : data.qMultPct; }
+      if (data.dmgBonus !== undefined) { el("ak_dmgBonus").value = data.dmgBonus; }
+      if (data.furenaPct !== undefined) { var _fu = parseFloat(data.furenaPct); el("ak_furenaPct").value = isNaN(_fu) ? 100 : data.furenaPct; }
+      if (data.critRate !== undefined) { el("ak_critRate").value = data.critRate; }
+      if (data.critDmg !== undefined) { el("ak_critDmg").value = data.critDmg; }
+      if (data.enemyRes !== undefined) { el("ak_enemyRes").value = data.enemyRes; }
+      if (data.defShred !== undefined) { el("ak_defShred").value = data.defShred; }
+    } catch (e) { /* 忽略 */ }
+  }
+  function onCalc() {
+    var p = {
+      charLv: parseFloat(el("ak_charLv").value) || 90,
+      baseAtk: parseFloat(el("ak_baseAtk").value) || 0,
+      atkPct: parseFloat(el("ak_atkPct").value) || 0,
+      smallAtk: parseFloat(el("ak_smallAtk").value) || 0,
+      flatAtk: parseFloat(el("ak_flatAtk").value) || 0,
+      featherTimes: parseFloat(el("ak_featherTimes").value) || 0,
+      eHits: parseInt(el("ak_eHits").value, 10) || 20,
+      qMultPct: parseFloat(el("ak_qMultPct").value) || 0,
+      dmgBonus: parseFloat(el("ak_dmgBonus").value) || 0,
+      furenaPct: parseFloat(el("ak_furenaPct").value) || 100,
+      critRate: parseFloat(el("ak_critRate").value) || 0,
+      critDmg: parseFloat(el("ak_critDmg").value) || 0,
+      enemyRes: parseFloat(el("ak_enemyRes").value) || 0,
+      defShred: parseFloat(el("ak_defShred").value) || 0
+    };
+    if (p.baseAtk <= 0) { alert("爱可菲：请填写基础攻击力（白值）"); return; }
+    lastParams = p;
+    render(compute(p, loadFeathers()));
+  }
+  function bind() {
+    el("ak_calcBtn").addEventListener("click", onCalc);
+    el("ak_detailBody").addEventListener("change", handleDetailChange);
+    el("ak_detailBody").addEventListener("click", function (e) {
+      var t = e.target;
+      if (t && t.dataset && t.dataset.qon !== undefined && t.type === "checkbox") { handleDetailChange(e); }
+    });
+    var ids = ["ak_charLv", "ak_baseAtk", "ak_atkPct", "ak_smallAtk", "ak_flatAtk", "ak_featherTimes", "ak_dmgBonus", "ak_furenaPct", "ak_critRate", "ak_critDmg", "ak_enemyRes", "ak_defShred"];
+    for (var i = 0; i < ids.length; i++) {
+      el(ids[i]).addEventListener("input", function () { saveParams(); if (lastParams) { render(compute(lastParams, loadFeathers())); } });
+    }
+    el("ak_eHits").addEventListener("input", function () { saveParams(); updateMultLine(); buildRows(); if (lastParams) { lastParams.eHits = parseInt(this.value, 10) || 20; render(compute(lastParams, loadFeathers())); } });
+    el("ak_qMultPct").addEventListener("input", function () { saveParams(); updateMultLine(); buildRows(); if (lastParams) { lastParams.qMultPct = parseFloat(this.value) || 0; render(compute(lastParams, loadFeathers())); } });
+    el("ak_featherTimes").addEventListener("input", updateFeatherSummary);
+  }
+  return {
+    init: function () { restoreParams(); updateMultLine(); bind(); buildRows(); },
+    onCalc: onCalc,
+    getTotal: function () { return lastTotal; },
+    defaultParams: function () {
+      return { charLv: "90", baseAtk: "", atkPct: "", smallAtk: "", flatAtk: "3500", featherTimes: "0", eHits: "20", qMultPct: "1067.04", dmgBonus: "", furenaPct: "100", critRate: "", critDmg: "", enemyRes: "", defShred: "0" };
+    },
+    defaultFeathers: defaultFeathers,
+    paramKey: PARAM_KEY, featherKey: FEATHER_KEY
+  };
+})();
+TEAM.ak = AK;
+
+/* ===== 芙宁娜 模块 ===== */
+var FU = (function () {
+  var PARAM_KEY = "furenaCalcParams";
+  var FEATHER_KEY = "furenaCalcFeathers";
+  var MONSTER_LV = 110;
+  var SALON_NAMES = ["沙龙·乌瑟", "沙龙·海薇玛", "沙龙·谢贝蕾妲"];
+  var lastParams = null;
+  var lastTotal = 0;
+
+  function defaultFeathers() {
+    return { counts: { 0: { 1: 0 }, 1: { 1: 0 }, 2: { 1: 0 }, 3: { 1: 0 } }, tao: { 0: 1, 1: 1, 2: 1, 3: 1 }, fur: { 0: 1, 1: 1, 2: 1, 3: 1 }, qOn: { 3: 1 } };
+  }
+  function loadFeathers() {
+    var d = defaultFeathers();
+    try {
+      var raw = localStorage.getItem(FEATHER_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data.counts) {
+          for (var k in data.counts) { d.counts[k] = data.counts[k]; }
+          if (data.tao) { for (var tk in data.tao) { d.tao[tk] = data.tao[tk]; } }
+          if (data.fur) { for (var fk in data.fur) { d.fur[fk] = data.fur[fk]; } }
+          if (data.qOn) { for (var qk in data.qOn) { d.qOn[qk] = data.qOn[qk]; } }
+        }
+      }
+    } catch (e) { /* 忽略 */ }
+    return d;
+  }
+  function saveFeathers(d) {
+    try { localStorage.setItem(FEATHER_KEY, JSON.stringify(d)); } catch (e) { /* 忽略 */ }
+  }
+
+  function compute(p, f) {
+    var charLv = p.charLv || 90;
+    var baseAtk = p.baseAtk || 0;
+    var atkPct = (p.atkPct || 0) / 100;
+    var smallAtk = p.smallAtk || 0;
+    var flatAtk = p.flatAtk || 0;
+    var dmgBonus = (p.dmgBonus || 0) / 100;
+    var critRate = (p.critRate || 0) / 100;
+    var critDmg = (p.critDmg || 0) / 100;
+    var enemyRes = (p.enemyRes || 0) / 100;
+    var defShred = (p.defShred || 0) / 100;
+    var eHits = Math.max(1, parseInt(p.eHits, 10) || 20);
+    var eMults = [(p.eMult1Pct || 0) / 100, (p.eMult2Pct || 0) / 100, (p.eMult3Pct || 0) / 100];
+    var qMult = (p.qMultPct || 0) / 100;
+    var furena = (p.furenaPct || 100) / 100;
+    var dmgBonusNoFur = Math.max(0, dmgBonus - furena);
+    var atkPctNoTao = Math.max(0, atkPct - 0.48);
+    var atk = baseAtk * (1 + atkPct) + smallAtk;
+    var atkNoTao = baseAtk * (1 + atkPctNoTao) + smallAtk;
+    var dmgMult = 1 + dmgBonus;
+    var dmgMultNoFur = 1 + dmgBonusNoFur;
+    var critMult = 1 + critRate * critDmg;
+    var r = enemyRes;
+    var resMult = r < 0 ? 1 - r / 2 : (r < 0.75 ? 1 - r : 1 / (1 + 4 * r));
+    var defMult = (charLv + 100) / ((charLv + 100) + (MONSTER_LV + 100) * (1 - defShred));
+    var rows = [];
+    var fc = (f && f.counts) ? f.counts : {};
+    var taoMap = (f && f.tao) ? f.tao : {};
+    var furMap = (f && f.fur) ? f.fur : {};
+    var qOnMap = (f && f.qOn) ? f.qOn : {};
+    for (var i = 0; i < 4; i++) {
+      var row = { idx: i + 1, type: i < 3 ? "E" : "Q", multText: "", dmgList: [], dmg: 0 };
+      if (i < 3) {
+        var multE = eMults[i];
+        if (multE <= 0) {
+          row.multText = "未填倍率";
+          rows.push(row);
+          continue;
+        }
+        var tao = !!(taoMap[i]);
+        var atkUse = tao ? atk : atkNoTao;
+        var cnt = Math.min(Math.max(0, (fc[i] && fc[i]["1"]) || 0), eHits);
+        var furOn = !!(furMap[i]);
+        var mult = furOn ? dmgMult : dmgMultNoFur;
+        var dmgWith = (atkUse * multE + flatAtk) * mult * critMult * resMult * defMult;
+        var dmgWo = (atkUse * multE) * mult * critMult * resMult * defMult;
+        var taoTxt = tao ? "含讨龙48%" : "讨龙失效";
+        var furTxt = furOn ? "含芙宁娜" : "扣芙宁娜" + fmtPct(furena * 100) + "%";
+        var multTxt = furOn
+          ? "增伤区 1+" + fmtPct(dmgBonus * 100) + "% = " + fmtPct(mult * 100) + "%（含芙宁娜）"
+          : "增伤区 1+" + fmtPct(dmgBonusNoFur * 100) + "% = " + fmtPct(mult * 100) + "%（扣芙宁娜" + fmtPct(furena * 100) + "%）";
+        var eHead = SALON_NAMES[i] + "（" + taoTxt + "，" + furTxt + "）\n倍率 " + fmtMult(multE * 100) + "×" + eHits;
+        var eCommon = "生命区 " + fmt1(atkUse) + "（" + taoTxt + "）\n" + multTxt + "\n暴击区 1+" + fmtPct(critRate * 100) + "%×" + fmtPct(critDmg * 100) + "% = " + fmtPct(critMult * 100) + "%\n抗性区 " + fmtPct(resMult * 100) + "%（抗性 " + fmtPct(enemyRes * 100) + "%）\n防御区 " + fmtPct(defMult * 100) + "%";
+        if (cnt > 0) {
+          row.dmgList.push({ dmg: dmgWith, times: cnt, tip: eHead + "\n" + eCommon + "\n羽毛 前" + cnt + " 段 +" + fmt1(flatAtk * cnt) + "（每根 " + fmt1(flatAtk) + "）\n基础区 " + fmt1(atkUse * multE + flatAtk) + "\n每段伤害 " + fmt(dmgWith) });
+        }
+        if (eHits - cnt > 0) {
+          row.dmgList.push({ dmg: dmgWo, times: eHits - cnt, tip: eHead + "\n" + eCommon + "\n羽毛 无\n基础区 " + fmt1(atkUse * multE) + "\n每段伤害 " + fmt(dmgWo) });
+        }
+        row.dmg = dmgWith * cnt + dmgWo * (eHits - cnt);
+        row.multText = fmtMult(multE * 100) + "×" + eHits;
+      } else {
+        var qOn = !!(qOnMap[i]);
+        if (qOn && qMult > 0) {
+          var cntQ = Math.max(0, Math.min(1, (fc[i] && fc[i]["1"]) || 0));
+          var qTao = !!(taoMap[i]);
+          var atkQ = qTao ? atk : atkNoTao;
+          var qFur = !!(furMap[i]);
+          var multQ = qFur ? dmgMult : dmgMultNoFur;
+          var dmgQw = (atkQ * qMult + flatAtk) * multQ * critMult * resMult * defMult;
+          var dmgQo = (atkQ * qMult) * multQ * critMult * resMult * defMult;
+          var qTaoTxt = qTao ? "含讨龙48%" : "讨龙失效";
+          var qFurTxt = qFur ? "含芙宁娜" : "扣芙宁娜" + fmtPct(furena * 100) + "%";
+          var qMultTxt = qFur
+            ? "增伤区 1+" + fmtPct(dmgBonus * 100) + "% = " + fmtPct(multQ * 100) + "%（含芙宁娜）"
+            : "增伤区 1+" + fmtPct(dmgBonusNoFur * 100) + "% = " + fmtPct(multQ * 100) + "%（扣芙宁娜" + fmtPct(furena * 100) + "%）";
+          var qHead = "Q 爆发（" + qTaoTxt + "，" + qFurTxt + "）\n倍率 " + fmtMult(qMult * 100) + "×1";
+          var qCommon = "生命区 " + fmt1(atkQ) + "（" + qTaoTxt + "）\n" + qMultTxt + "\n暴击区 1+" + fmtPct(critRate * 100) + "%×" + fmtPct(critDmg * 100) + "% = " + fmtPct(critMult * 100) + "%\n抗性区 " + fmtPct(resMult * 100) + "%（抗性 " + fmtPct(enemyRes * 100) + "%）\n防御区 " + fmtPct(defMult * 100) + "%";
+          if (cntQ > 0) {
+            row.dmgList.push({ dmg: dmgQw, times: 1, tip: qHead + "\n" + qCommon + "\n羽毛 1 根 +" + fmt1(flatAtk) + "\n基础区 " + fmt1(atkQ * qMult + flatAtk) + "\n伤害 " + fmt(dmgQw) });
+            row.dmg = dmgQw;
+          } else {
+            row.dmgList.push({ dmg: dmgQo, times: 1, tip: qHead + "\n" + qCommon + "\n羽毛 无\n基础区 " + fmt1(atkQ * qMult) + "\n伤害 " + fmt(dmgQo) });
+            row.dmg = dmgQo;
+          }
+          row.multText = fmtMult(qMult * 100) + "×1";
+        } else {
+          row.multText = qOn ? "未填倍率" : "未启用";
+        }
+      }
+      rows.push(row);
+    }
+    var total = 0, salonTotal = 0, qTotal = 0;
+    for (var k = 0; k < rows.length; k++) {
+      total += rows[k].dmg;
+      if (k < 3) { salonTotal += rows[k].dmg; } else { qTotal += rows[k].dmg; }
+    }
+    return { rows: rows, total: total, salonTotal: salonTotal, qTotal: qTotal, flatAtk: flatAtk, eHits: eHits, eMults: eMults, qMultPct: p.qMultPct || 0, furena: furena, dmgBonus: dmgBonus, dmgBonusNoFur: dmgBonusNoFur, critMult: critMult, critRate: critRate, critDmg: critDmg, resMult: resMult, defMult: defMult, enemyRes: enemyRes, charLv: charLv, hp: atk };
+  }
+
+  function updateFeatherSummary() {
+    var data = loadFeathers();
+    var used = 0;
+    var hits = Math.max(1, parseInt(el("fu_eHits").value, 10) || 20);
+    for (var i = 0; i < 3; i++) {
+      if (data.counts && data.counts[i] && data.counts[i]["1"]) { used += Math.min(data.counts[i]["1"], hits); }
+    }
+    if (data.counts && data.counts[3] && data.counts[3]["1"]) { used += Math.min(data.counts[3]["1"], 1); }
+    var elx = el("fu_featherSummary");
+    if (!elx) { return; }
+    var times = readNum("fu_featherTimes");
+    if (times > 0) {
+      elx.innerHTML = "羽毛已分配 <b>" + used + "</b> 次 / 上限 " + times + " 次" + (used > times ? "（超出 " + (used - times) + " 次）" : "");
+      elx.className = "feather-sum" + (used > times ? " over" : "");
+    } else {
+      elx.innerHTML = "羽毛已分配 <b>" + used + "</b> 次（未设上限）";
+      elx.className = "feather-sum";
+    }
+  }
+
+  function buildRows() {
+    var body = el("fu_detailBody");
+    if (!body) { return; }
+    var data = loadFeathers();
+    var hits = Math.max(1, parseInt(el("fu_eHits").value, 10) || 20);
+    var eMultIds = ["fu_eMult1Pct", "fu_eMult2Pct", "fu_eMult3Pct"];
+    var html = "";
+    for (var k = 0; k < 3; k++) {
+      var val = (data.counts[k] && data.counts[k]["1"] !== undefined) ? Math.min(data.counts[k]["1"], hits) : 0;
+      var fcol = '<span class="fseg">前 <input type="number" min="0" max="' + hits + '" step="1" data-idx="' + k + '" data-seg="1" value="' + val + '"></span> 段吃羽';
+      var taoOn = !!(data.tao && data.tao[k]);
+      var taoCell = '<label class="tao-box"><input type="checkbox" data-tao="1" data-idx="' + k + '"' + (taoOn ? " checked" : "") + '></label>';
+      var furOn = !!(data.fur && data.fur[k]);
+      var furCell = '<label class="tao-box"><input type="checkbox" data-fur="1" data-idx="' + k + '"' + (furOn ? " checked" : "") + '></label>';
+      var eMultPct = parseFloat(el(eMultIds[k]).value);
+      var eMultTxt = isNaN(eMultPct) ? "—" : fmtMult(eMultPct) + "×" + hits;
+      html += "<tr data-idx=\"" + k + "\">" +
+        "<td>" + (k + 1) + "</td>" +
+        "<td class=\"fcol\">" + fcol + "</td>" +
+        "<td><b>" + SALON_NAMES[k] + "</b></td>" +
+        "<td class=\"taoc\">" + taoCell + "</td>" +
+        "<td class=\"taoc\">" + furCell + "</td>" +
+        "<td>" + eMultTxt + "</td>" +
+        "<td class=\"q-post\">后台</td>" +
+        "<td class=\"num\">—</td>" +
+        "</tr>";
+    }
+    var qOn = !!(data.qOn && data.qOn[3]);
+    var qVal = (data.counts[3] && data.counts[3]["1"] !== undefined) ? Math.min(data.counts[3]["1"], 1) : 0;
+    var qMultPct = parseFloat(el("fu_qMultPct").value);
+    var qMultTxt = isNaN(qMultPct) ? "—" : fmtMult(qMultPct) + "×1";
+    var qfcol = '<label class="fiss-toggle' + (qOn ? " on" : "") + '" data-qon="1" data-idx="3" title="点击开关 Q 爆发">' +
+      '<input type="checkbox" data-qon="1" data-idx="3"' + (qOn ? " checked" : "") + '>' +
+      '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-12h-7l1-8z"/></svg>' +
+      '<span class="fiss-txt">启用</span></label>' +
+      '<span class="fseg">Q 羽 <input type="number" min="0" max="1" step="1" data-idx="3" data-seg="1" value="' + qVal + '"></span>';
+    var qTaoOn = !!(data.tao && data.tao[3]);
+    var qTaoCell = '<label class="tao-box"><input type="checkbox" data-tao="1" data-idx="3"' + (qTaoOn ? " checked" : "") + '></label>';
+    var qFurOn = !!(data.fur && data.fur[3]);
+    var qFurCell = '<label class="tao-box"><input type="checkbox" data-fur="1" data-idx="3"' + (qFurOn ? " checked" : "") + '></label>';
+    html += "<tr data-idx=\"3\">" +
+      "<td>4</td>" +
+      "<td class=\"fcol\">" + qfcol + "</td>" +
+      "<td><b>Q</b></td>" +
+      "<td class=\"taoc\">" + qTaoCell + "</td>" +
+      "<td class=\"taoc\">" + qFurCell + "</td>" +
+      "<td>" + qMultTxt + "</td>" +
+      "<td class=\"q-post\">爆发</td>" +
+      "<td class=\"num\">—</td>" +
+      "</tr>";
+    body.innerHTML = html;
+    updateFeatherSummary();
+  }
+
+  function handleDetailChange(e) {
+    var t = e.target;
+    if (!t) { return; }
+    var data = loadFeathers();
+    if (t.dataset && t.dataset.idx !== undefined && t.dataset.seg !== undefined) {
+      var idx = t.dataset.idx, seg = t.dataset.seg;
+      if (!data.counts[idx]) { data.counts[idx] = {}; }
+      data.counts[idx][seg] = Math.max(0, parseInt(t.value, 10) || 0);
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.tao !== undefined && t.dataset.idx !== undefined) {
+      var idxT = t.dataset.idx;
+      if (!data.tao) { data.tao = {}; }
+      data.tao[idxT] = t.checked ? 1 : 0;
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.fur !== undefined && t.dataset.idx !== undefined) {
+      var idxF = t.dataset.idx;
+      if (!data.fur) { data.fur = {}; }
+      data.fur[idxF] = t.checked ? 1 : 0;
+      saveFeathers(data);
+    } else if (t.dataset && t.dataset.qon !== undefined && t.dataset.idx !== undefined) {
+      var idxQ = t.dataset.idx;
+      if (!data.qOn) { data.qOn = {}; }
+      data.qOn[idxQ] = t.checked ? 1 : 0;
+      saveFeathers(data);
+      updateMultLine();
+    }
+    if (lastParams) { render(compute(lastParams, loadFeathers())); }
+    updateFeatherSummary();
+  }
+
+  function render(res) {
+    lastTotal = res.total;
+    var dur = getTeamDuration();
+    el("fu_summary").innerHTML =
+      '<div class="sum-card total"><div class="lbl">芙宁娜总伤</div><div class="num">' + fmt(res.total) + '</div></div>' +
+      '<div class="sum-card total"><div class="lbl">芙宁娜 DPS</div><div class="num">' + (dur > 0 ? fmt(res.total / dur) : "—") + '</div></div>' +
+      '<div class="sum-card"><div class="lbl">沙龙总伤</div><div class="num">' + fmt(res.salonTotal) + '</div></div>' +
+      '<div class="sum-card"><div class="lbl">Q 爆发</div><div class="num">' + fmt(res.qTotal) + '</div></div>';
+    var body = el("fu_detailBody");
+    for (var i = 0; i < res.rows.length; i++) {
+      var r = res.rows[i];
+      var tr = body.querySelector('tr[data-idx="' + i + '"]');
+      if (!tr) { continue; }
+      var td = tr.querySelector("td.num");
+      var cls = r.dmg > 0 ? "q-post" : "nodmg";
+      td.className = "num " + cls;
+      td.innerHTML = r.dmgList.length ? r.dmgList.map(function (o) {
+        return '<span class="dmg-tip" data-tip="' + escAttr(o.tip || "") + '">' + fmt(o.dmg) + (o.times > 1 ? " × " + o.times : "") + '</span>';
+      }).join("<br>") : "—";
+    }
+    updateTeam();
+  }
+
+  function updateMultLine() {
+    var elx = el("fu_totalMultLine");
+    if (!elx) { return; }
+    var hits = Math.max(1, parseInt(el("fu_eHits").value, 10) || 20);
+    var e1 = parseFloat(el("fu_eMult1Pct").value);
+    var e2 = parseFloat(el("fu_eMult2Pct").value);
+    var e3 = parseFloat(el("fu_eMult3Pct").value);
+    var m1 = isNaN(e1) ? 0 : e1 / 100, m2 = isNaN(e2) ? 0 : e2 / 100, m3 = isNaN(e3) ? 0 : e3 / 100;
+    var eTxt = fmtMult((m1 + m2 + m3) * 100) + "×" + hits;
+    var qMultPct = parseFloat(el("fu_qMultPct").value);
+    var qMult = isNaN(qMultPct) ? 0 : qMultPct / 100;
+    var qTxt = isNaN(qMultPct) ? "—" : fmtMult(qMultPct);
+    var data = loadFeathers();
+    var qOn = !!(data.qOn && data.qOn[3]);
+    var total = (m1 + m2 + m3) * hits + (qOn ? qMult : 0);
+    elx.textContent = "总倍率：" + fmtMult(total) + "（沙龙 " + eTxt + (qOn ? " + Q " + qTxt : "") + "）";
+  }
+  function saveParams() {
+    var data = {
+      charLv: el("fu_charLv").value, baseAtk: el("fu_baseAtk").value, atkPct: el("fu_atkPct").value,
+      smallAtk: el("fu_smallAtk").value, flatAtk: el("fu_flatAtk").value, featherTimes: el("fu_featherTimes").value,
+      eHits: el("fu_eHits").value, eMult1Pct: el("fu_eMult1Pct").value, eMult2Pct: el("fu_eMult2Pct").value,
+      eMult3Pct: el("fu_eMult3Pct").value, qMultPct: el("fu_qMultPct").value,
+      dmgBonus: el("fu_dmgBonus").value, furenaPct: el("fu_furenaPct").value,
+      critRate: el("fu_critRate").value, critDmg: el("fu_critDmg").value,
+      enemyRes: el("fu_enemyRes").value, defShred: el("fu_defShred").value
+    };
+    try { localStorage.setItem(PARAM_KEY, JSON.stringify(data)); } catch (e) { /* 忽略 */ }
+  }
+  function restoreParams() {
+    var raw = null;
+    try { raw = localStorage.getItem(PARAM_KEY); } catch (e) { return; }
+    if (!raw) { return; }
+    try {
+      var data = JSON.parse(raw);
+      if (data.charLv !== undefined) { el("fu_charLv").value = data.charLv; }
+      if (data.baseAtk !== undefined) { el("fu_baseAtk").value = data.baseAtk; }
+      if (data.atkPct !== undefined) { el("fu_atkPct").value = data.atkPct; }
+      if (data.smallAtk !== undefined) { el("fu_smallAtk").value = data.smallAtk; }
+      if (data.flatAtk !== undefined) { var _fa = parseFloat(data.flatAtk); el("fu_flatAtk").value = isNaN(_fa) ? 3500 : data.flatAtk; }
+      if (data.featherTimes !== undefined) { var _ft = parseFloat(data.featherTimes); el("fu_featherTimes").value = isNaN(_ft) ? 0 : data.featherTimes; }
+      if (data.eHits !== undefined) { var _eh = parseInt(data.eHits, 10); el("fu_eHits").value = isNaN(_eh) ? 20 : data.eHits; }
+      if (data.eMult1Pct !== undefined) { el("fu_eMult1Pct").value = data.eMult1Pct; }
+      if (data.eMult2Pct !== undefined) { el("fu_eMult2Pct").value = data.eMult2Pct; }
+      if (data.eMult3Pct !== undefined) { el("fu_eMult3Pct").value = data.eMult3Pct; }
+      if (data.qMultPct !== undefined) { el("fu_qMultPct").value = data.qMultPct; }
+      if (data.dmgBonus !== undefined) { el("fu_dmgBonus").value = data.dmgBonus; }
+      if (data.furenaPct !== undefined) { var _fu = parseFloat(data.furenaPct); el("fu_furenaPct").value = isNaN(_fu) ? 100 : data.furenaPct; }
+      if (data.critRate !== undefined) { el("fu_critRate").value = data.critRate; }
+      if (data.critDmg !== undefined) { el("fu_critDmg").value = data.critDmg; }
+      if (data.enemyRes !== undefined) { el("fu_enemyRes").value = data.enemyRes; }
+      if (data.defShred !== undefined) { el("fu_defShred").value = data.defShred; }
+    } catch (e) { /* 忽略 */ }
+  }
+  function onCalc() {
+    var p = {
+      charLv: parseFloat(el("fu_charLv").value) || 90,
+      baseAtk: parseFloat(el("fu_baseAtk").value) || 0,
+      atkPct: parseFloat(el("fu_atkPct").value) || 0,
+      smallAtk: parseFloat(el("fu_smallAtk").value) || 0,
+      flatAtk: parseFloat(el("fu_flatAtk").value) || 0,
+      featherTimes: parseFloat(el("fu_featherTimes").value) || 0,
+      eHits: parseInt(el("fu_eHits").value, 10) || 20,
+      eMult1Pct: parseFloat(el("fu_eMult1Pct").value) || 0,
+      eMult2Pct: parseFloat(el("fu_eMult2Pct").value) || 0,
+      eMult3Pct: parseFloat(el("fu_eMult3Pct").value) || 0,
+      qMultPct: parseFloat(el("fu_qMultPct").value) || 0,
+      dmgBonus: parseFloat(el("fu_dmgBonus").value) || 0,
+      furenaPct: parseFloat(el("fu_furenaPct").value) || 100,
+      critRate: parseFloat(el("fu_critRate").value) || 0,
+      critDmg: parseFloat(el("fu_critDmg").value) || 0,
+      enemyRes: parseFloat(el("fu_enemyRes").value) || 0,
+      defShred: parseFloat(el("fu_defShred").value) || 0
+    };
+    if (p.baseAtk <= 0) { alert("芙宁娜：请填写基础生命（白值）"); return; }
+    lastParams = p;
+    render(compute(p, loadFeathers()));
+  }
+  function bind() {
+    el("fu_calcBtn").addEventListener("click", onCalc);
+    el("fu_detailBody").addEventListener("change", handleDetailChange);
+    el("fu_detailBody").addEventListener("click", function (e) {
+      var t = e.target;
+      if (t && t.dataset && t.dataset.qon !== undefined && t.type === "checkbox") { handleDetailChange(e); }
+    });
+    var ids = ["fu_charLv", "fu_baseAtk", "fu_atkPct", "fu_smallAtk", "fu_flatAtk", "fu_featherTimes", "fu_dmgBonus", "fu_furenaPct", "fu_critRate", "fu_critDmg", "fu_enemyRes", "fu_defShred"];
+    for (var i = 0; i < ids.length; i++) {
+      el(ids[i]).addEventListener("input", function () { saveParams(); if (lastParams) { render(compute(lastParams, loadFeathers())); } });
+    }
+    var mids = ["fu_eHits", "fu_eMult1Pct", "fu_eMult2Pct", "fu_eMult3Pct", "fu_qMultPct"];
+    for (var j = 0; j < mids.length; j++) {
+      el(mids[j]).addEventListener("input", function () { saveParams(); updateMultLine(); buildRows(); if (lastParams) { lastParams.eHits = parseInt(el("fu_eHits").value, 10) || 20; lastParams.eMult1Pct = parseFloat(el("fu_eMult1Pct").value) || 0; lastParams.eMult2Pct = parseFloat(el("fu_eMult2Pct").value) || 0; lastParams.eMult3Pct = parseFloat(el("fu_eMult3Pct").value) || 0; lastParams.qMultPct = parseFloat(el("fu_qMultPct").value) || 0; render(compute(lastParams, loadFeathers())); } });
+    }
+    el("fu_featherTimes").addEventListener("input", updateFeatherSummary);
+  }
+  return {
+    init: function () { restoreParams(); updateMultLine(); bind(); buildRows(); },
+    onCalc: onCalc,
+    getTotal: function () { return lastTotal; },
+    defaultParams: function () {
+      return { charLv: "90", baseAtk: "", atkPct: "", smallAtk: "", flatAtk: "3500", featherTimes: "0", eHits: "20", eMult1Pct: "", eMult2Pct: "", eMult3Pct: "", qMultPct: "", dmgBonus: "", furenaPct: "100", critRate: "", critDmg: "", enemyRes: "", defShred: "0" };
+    },
+    defaultFeathers: defaultFeathers,
+    paramKey: PARAM_KEY, featherKey: FEATHER_KEY
+  };
+})();
+TEAM.fu = FU;
+
+/* ===== 沃雅妮莎 模块 ===== */
+var WO = (function () {
+  var PARAM_KEY = "woyanisaCalcParams";
+  var FEATHER_KEY = "woyanisaCalcFeathers";
+  var MONSTER_LV = 110;
+  var lastParams = null;
+  var lastTotal = 0;
+
+  function defaultFeathers() {
+    return { hits: 0, fur: true };
+  }
+  function loadFeathers() {
+    var d = defaultFeathers();
+    try {
+      var raw = localStorage.getItem(FEATHER_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data.hits !== undefined) { d.hits = Math.max(0, parseInt(data.hits, 10) || 0); }
+        if (data.fur !== undefined) { d.fur = !!data.fur; }
+      }
+    } catch (e) { /* 忽略 */ }
+    return d;
+  }
+  function saveFeathers(d) {
+    try { localStorage.setItem(FEATHER_KEY, JSON.stringify(d)); } catch (e) { /* 忽略 */ }
+  }
+
+  function compute(p, f) {
+    var charLv = p.charLv || 90;
+    var hp = p.hp || 0;
+    var mult = (p.multPct || 0) / 100;
+    var hits = Math.max(0, Math.floor(p.multHits || 0));
+    var flatAtk = p.flatAtk || 0;
+    var dmgBonus = (p.dmgBonus || 0) / 100;
+    var critRate = (p.critRate || 0) / 100;
+    var critDmg = (p.critDmg || 0) / 100;
+    var enemyRes = (p.enemyRes || 0) / 100;
+    var furena = (p.furenaPct || 100) / 100;
+    var dmgBonusNoFur = Math.max(0, dmgBonus - furena);
+    var featherHits = Math.min(Math.max(0, Math.floor((f && f.hits) || 0)), hits);
+    var furOn = !!(f && f.fur);
+    var dmgMult = 1 + dmgBonus;
+    var dmgMultNoFur = 1 + dmgBonusNoFur;
+    var critMult = 1 + critRate * critDmg;
+    var r = enemyRes;
+    var resMult = r < 0 ? 1 - r / 2 : (r < 0.75 ? 1 - r : 1 / (1 + 4 * r));
+    var defMult = (charLv + 100) / ((charLv + 100) + (MONSTER_LV + 100));
+    var withFeather = (hp * mult + flatAtk) * (furOn ? dmgMult : dmgMultNoFur) * critMult * resMult * defMult;
+    var withoutFeather = (hp * mult) * (furOn ? dmgMult : dmgMultNoFur) * critMult * resMult * defMult;
+    var total = withFeather * featherHits + withoutFeather * (hits - featherHits);
+    return {
+      total: total, hp: hp, mult: mult, multPct: p.multPct || 0, hits: hits,
+      featherHits: featherHits, flatAtk: flatAtk,
+      dmgMult: dmgMult, dmgBonusNoFur: dmgBonusNoFur, furena: furena,
+      critMult: critMult, critRate: critRate, critDmg: critDmg, resMult: resMult, defMult: defMult,
+      enemyRes: enemyRes, charLv: charLv,
+      withFeather: withFeather, withoutFeather: withoutFeather, furOn: furOn
+    };
+  }
+
+  function updateFeatherSummary() {
+    var data = loadFeathers();
+    var used = Math.max(0, data.hits || 0);
+    var elx = el("wo_featherSummary");
+    if (!elx) { return; }
+    var times = readNum("wo_featherTimes");
+    if (times > 0) {
+      elx.innerHTML = "羽毛已分配 <b>" + used + "</b> 次 / 上限 " + times + " 次" + (used > times ? "（超出 " + (used - times) + " 次）" : "");
+      elx.className = "feather-sum" + (used > times ? " over" : "");
+    } else {
+      elx.innerHTML = "羽毛已分配 <b>" + used + "</b> 次（未设上限）";
+      elx.className = "feather-sum";
+    }
+  }
+
+  function buildRows() {
+    var body = el("wo_detailBody");
+    if (!body) { return; }
+    var data = loadFeathers();
+    var name = "麦克风";
+    var hits = Math.max(0, parseInt(el("wo_multHits").value, 10) || 0);
+    var maxV = hits > 0 ? hits : 999;
+    var val = Math.min(Math.max(0, data.hits || 0), maxV);
+    body.innerHTML =
+      '<tr data-idx="0">' +
+      "<td>1</td>" +
+      '<td class="fcol"><span class="fseg">前 <input type="number" min="0" max="' + maxV + '" step="1" data-idx="0" data-seg="hits" value="' + val + '"></span> 次吃羽</td>' +
+      "<td><b>" + escAttr(name) + "</b></td>" +
+      '<td class="taoc"><label class="tao-box"><input type="checkbox" data-fur="1" data-idx="0"' + (data.fur ? " checked" : "") + '></label></td>' +
+      "<td>" + (hits > 0 ? (escAttr(name) + " 倍率 × " + hits + " 次") : "—") + "</td>" +
+      '<td class="num">—</td>' +
+      "</tr>";
+    updateFeatherSummary();
+  }
+
+  function handleDetailChange(e) {
+    var t = e.target;
+    if (!t || !t.dataset) { return; }
+    var data = loadFeathers();
+    if (t.dataset.idx !== undefined && t.dataset.seg !== undefined) {
+      data.hits = Math.max(0, parseInt(t.value, 10) || 0);
+      saveFeathers(data);
+    } else if (t.dataset.fur !== undefined && t.dataset.idx !== undefined) {
+      data.fur = t.checked;
+      saveFeathers(data);
+    }
+    if (lastParams) { render(compute(lastParams, loadFeathers())); }
+    updateFeatherSummary();
+  }
+
+  function render(res) {
+    lastTotal = res.total;
+    var dur = getTeamDuration();
+    el("wo_summary").innerHTML =
+      '<div class="sum-card total"><div class="lbl">沃雅妮莎总伤</div><div class="num">' + fmt(res.total) + '</div></div>' +
+      '<div class="sum-card total"><div class="lbl">沃雅妮莎 DPS</div><div class="num">' + (dur > 0 ? fmt(res.total / dur) : "—") + '</div></div>';
+    var td = document.querySelector("#wo_detailBody tr td.num");
+    if (td) {
+      var tips = [];
+      if (res.featherHits > 0) {
+        tips.push({ dmg: res.withFeather, times: res.featherHits, tip:
+          "麦克风 倍率 " + fmtMult(res.multPct) + "（生命倍率 ×" + res.hits + " 次）\n生命区（最终生命值）" + fmt1(res.hp) + "\n羽毛 前" + res.featherHits + " 次判定 +" + fmt1(res.flatAtk * res.featherHits) + "（每根 " + fmt1(res.flatAtk) + "，不乘倍率）\n" +
+          (res.furOn ? "增伤区 1+" + fmtPct((res.dmgMult - 1) * 100) + "% = " + fmtPct(res.dmgMult * 100) + "%（含芙宁娜）" : "增伤区 1+" + fmtPct(res.dmgBonusNoFur * 100) + "% = " + fmtPct(res.dmgMult * 100) + "%（扣芙宁娜" + fmtPct(res.furena * 100) + "%）") +
+          "\n暴击区 1+" + fmtPct(res.critRate * 100) + "%×" + fmtPct(res.critDmg * 100) + "% = " + fmtPct(res.critMult * 100) + "%\n抗性区 " + fmtPct(res.resMult * 100) + "%（抗性 " + fmtPct(res.enemyRes * 100) + "%）\n防御区 " + fmtPct(res.defMult * 100) + "%（角色 " + fmt(res.charLv) + " 级，怪物 110）\n基础区 " + fmt1(res.hp * res.mult + res.flatAtk) + "\n每段伤害 " + fmt(res.withFeather)
+        });
+      }
+      if (res.hits - res.featherHits > 0) {
+        tips.push({ dmg: res.withoutFeather, times: res.hits - res.featherHits, tip:
+          "麦克风 倍率 " + fmtMult(res.multPct) + "（生命倍率 ×" + res.hits + " 次）\n生命区（最终生命值）" + fmt1(res.hp) + "\n羽毛 无\n" +
+          (res.furOn ? "增伤区 1+" + fmtPct((res.dmgMult - 1) * 100) + "% = " + fmtPct(res.dmgMult * 100) + "%（含芙宁娜）" : "增伤区 1+" + fmtPct(res.dmgBonusNoFur * 100) + "% = " + fmtPct(res.dmgMult * 100) + "%（扣芙宁娜" + fmtPct(res.furena * 100) + "%）") +
+          "\n暴击区 1+" + fmtPct(res.critRate * 100) + "%×" + fmtPct(res.critDmg * 100) + "% = " + fmtPct(res.critMult * 100) + "%\n抗性区 " + fmtPct(res.resMult * 100) + "%（抗性 " + fmtPct(res.enemyRes * 100) + "%）\n防御区 " + fmtPct(res.defMult * 100) + "%（角色 " + fmt(res.charLv) + " 级，怪物 110）\n基础区 " + fmt1(res.hp * res.mult) + "\n每段伤害 " + fmt(res.withoutFeather)
+        });
+      }
+      td.innerHTML = tips.length ? tips.map(function (o) {
+        return '<span class="dmg-tip" data-tip="' + escAttr(o.tip || "") + '">' + fmt(o.dmg) + (o.times > 1 ? " × " + o.times : "") + '</span>';
+      }).join("<br>") : "—";
+    }
+    updateTeam();
+  }
+
+  function updateMultLine() {
+    var elx = el("wo_totalMultLine");
+    if (!elx) { return; }
+    var m = parseFloat(el("wo_multPct").value);
+    var h = Math.max(0, parseInt(el("wo_multHits").value, 10) || 0);
+    if (isNaN(m) || h <= 0) {
+      elx.textContent = "倍率配置：请填写生命倍率（%）与次数";
+      return;
+    }
+    elx.textContent = "麦克风：倍率 " + (Math.round(m * 1000) / 10) + "% × " + h + " 次 = 总倍率 " + (Math.round(m * h * 1000) / 10) + "%（不含羽毛）";
+  }
+  function saveParams() {
+    var data = {
+      charLv: el("wo_charLv").value, hp: el("wo_hp").value, flatAtk: el("wo_flatAtk").value,
+      featherTimes: el("wo_featherTimes").value, multPct: el("wo_multPct").value, multHits: el("wo_multHits").value,
+      dmgBonus: el("wo_dmgBonus").value, furenaPct: el("wo_furenaPct").value,
+      critRate: el("wo_critRate").value, critDmg: el("wo_critDmg").value, enemyRes: el("wo_enemyRes").value
+    };
+    try { localStorage.setItem(PARAM_KEY, JSON.stringify(data)); } catch (e) { /* 忽略 */ }
+  }
+  function restoreParams() {
+    var raw = null;
+    try { raw = localStorage.getItem(PARAM_KEY); } catch (e) { return; }
+    if (!raw) { return; }
+    try {
+      var data = JSON.parse(raw);
+      var ids = ["charLv", "hp", "multPct", "multHits", "dmgBonus", "critRate", "critDmg", "enemyRes"];
+      for (var i = 0; i < ids.length; i++) {
+        if (data[ids[i]] !== undefined) { el("wo_" + ids[i]).value = data[ids[i]]; }
+      }
+      if (data.flatAtk !== undefined) { var _fa = parseFloat(data.flatAtk); el("wo_flatAtk").value = isNaN(_fa) ? 3500 : data.flatAtk; }
+      if (data.featherTimes !== undefined) { var _ft = parseFloat(data.featherTimes); el("wo_featherTimes").value = isNaN(_ft) ? 25 : data.featherTimes; }
+      if (data.furenaPct !== undefined) { var _fu = parseFloat(data.furenaPct); el("wo_furenaPct").value = isNaN(_fu) ? 100 : data.furenaPct; }
+    } catch (e) { /* 忽略 */ }
+  }
+  function onCalc() {
+    var p = {
+      charLv: parseFloat(el("wo_charLv").value) || 90,
+      hp: parseFloat(el("wo_hp").value) || 0,
+      flatAtk: parseFloat(el("wo_flatAtk").value) || 0,
+      featherTimes: parseFloat(el("wo_featherTimes").value) || 0,
+      multPct: parseFloat(el("wo_multPct").value) || 0,
+      multHits: Math.max(0, Math.floor(parseFloat(el("wo_multHits").value) || 0)),
+      dmgBonus: parseFloat(el("wo_dmgBonus").value) || 0,
+      furenaPct: parseFloat(el("wo_furenaPct").value) || 100,
+      critRate: parseFloat(el("wo_critRate").value) || 0,
+      critDmg: parseFloat(el("wo_critDmg").value) || 0,
+      enemyRes: parseFloat(el("wo_enemyRes").value) || 0
+    };
+    if (p.hp <= 0) { alert("沃雅妮莎：请填写最终生命值"); return; }
+    if (p.multPct <= 0) { alert("沃雅妮莎：请填写生命倍率（%）"); return; }
+    if (p.multHits <= 0) { alert("沃雅妮莎：请填写次数"); return; }
+    lastParams = p;
+    render(compute(p, loadFeathers()));
+  }
+  function bind() {
+    el("wo_calcBtn").addEventListener("click", onCalc);
+    el("wo_detailBody").addEventListener("change", handleDetailChange);
+    var ids = ["wo_charLv", "wo_hp", "wo_flatAtk", "wo_featherTimes", "wo_dmgBonus", "wo_furenaPct", "wo_critRate", "wo_critDmg", "wo_enemyRes"];
+    for (var i = 0; i < ids.length; i++) {
+      el(ids[i]).addEventListener("input", function () { saveParams(); if (lastParams) { render(compute(lastParams, loadFeathers())); } });
+    }
+    el("wo_multPct").addEventListener("input", function () { saveParams(); updateMultLine(); if (lastParams) { render(compute(lastParams, loadFeathers())); } });
+    el("wo_multHits").addEventListener("input", function () { saveParams(); updateMultLine(); buildRows(); if (lastParams) { render(compute(lastParams, loadFeathers())); } });
+    el("wo_featherTimes").addEventListener("input", updateFeatherSummary);
+  }
+  return {
+    init: function () { restoreParams(); updateMultLine(); bind(); buildRows(); },
+    onCalc: onCalc,
+    getTotal: function () { return lastTotal; },
+    defaultParams: function () {
+      return { charLv: "90", hp: "", flatAtk: "3500", featherTimes: "25", multPct: "", multHits: "", dmgBonus: "", furenaPct: "100", critRate: "", critDmg: "", enemyRes: "" };
+    },
+    defaultFeathers: defaultFeathers,
+    paramKey: PARAM_KEY, featherKey: FEATHER_KEY
+  };
+})();
+TEAM.wo = WO;
+
+/* ===== 初始化 ===== */
+var TEAM_KEY = "teamCalcParams";
+var DEFAULTS = {
+  team: { duration: "" },
+  si: { charLv: "", baseAtk: "1033", atkPct: "", smallAtk: "", flatAtk: "3500", featherTimes: "25", daQuanPct: "1.7", dmgBonus: "", furenaPct: "100", critRate: "", critDmg: "", enemyRes: "", defShred: "0" },
+  ak: { charLv: "90", baseAtk: "", atkPct: "", smallAtk: "", flatAtk: "3500", featherTimes: "0", dmgBonus: "", furenaPct: "100", critRate: "", critDmg: "", enemyRes: "", defShred: "0", eHits: "20", qMultPct: "1067.04" },
+  fu: { charLv: "90", baseAtk: "", atkPct: "", smallAtk: "", flatAtk: "3500", featherTimes: "0", dmgBonus: "", furenaPct: "100", critRate: "", critDmg: "", enemyRes: "", defShred: "0", eHits: "20", eMult1Pct: "", eMult2Pct: "", eMult3Pct: "", qMultPct: "" },
+  wo: { charLv: "90", hp: "", flatAtk: "3500", featherTimes: "25", dmgBonus: "", furenaPct: "100", critRate: "", critDmg: "", enemyRes: "", multPct: "", multHits: "" }
+};
+
+function saveTeamDuration() {
+  try {
+    var raw = localStorage.getItem(TEAM_KEY) || "{}";
+    var data = JSON.parse(raw);
+    data.duration = el("teamDuration").value;
+    localStorage.setItem(TEAM_KEY, JSON.stringify(data));
+  } catch (e) { /* 忽略 */ }
+}
+function restoreTeamDuration() {
+  try {
+    var raw = localStorage.getItem(TEAM_KEY);
+    if (raw) {
+      var data = JSON.parse(raw);
+      if (data.duration !== undefined) { el("teamDuration").value = data.duration; }
+    }
+  } catch (e) { /* 忽略 */ }
+}
+
+function applyDefaultsToInputs(mod, params) {
+  var ids = mod.paramIds || [];
+  for (var i = 0; i < ids.length; i++) {
+    var id = ids[i];
+    var key = id.slice(3);
+    var val = params[key] !== undefined ? params[key] : "";
+    el(id).value = val;
+  }
+  if (mod === AK) { el("ak_eHits").value = params.eHits !== undefined ? params.eHits : "20"; el("ak_qMultPct").value = params.qMultPct !== undefined ? params.qMultPct : "1067.04"; }
+  if (mod === FU) {
+    el("fu_eHits").value = params.eHits !== undefined ? params.eHits : "20";
+    el("fu_eMult1Pct").value = params.eMult1Pct !== undefined ? params.eMult1Pct : "";
+    el("fu_eMult2Pct").value = params.eMult2Pct !== undefined ? params.eMult2Pct : "";
+    el("fu_eMult3Pct").value = params.eMult3Pct !== undefined ? params.eMult3Pct : "";
+    el("fu_qMultPct").value = params.qMultPct !== undefined ? params.qMultPct : "";
+  }
+  if (mod === WO) { el("wo_multPct").value = params.multPct !== undefined ? params.multPct : ""; el("wo_multHits").value = params.multHits !== undefined ? params.multHits : ""; }
+  if (mod === SI) { el("si_daQuanPct").value = params.daQuanPct !== undefined ? params.daQuanPct : "1.7"; }
+}
+
+function resetAll() {
+  if (!confirm("确定恢复默认配置？将覆盖本地保存的全部角色参数与明细勾选。")) { return; }
+  try {
+    localStorage.removeItem(SI.featherKey);
+    localStorage.removeItem(AK.featherKey);
+    localStorage.removeItem(FU.featherKey);
+    localStorage.removeItem(WO.featherKey);
+    localStorage.setItem(SI.paramKey, JSON.stringify(DEFAULTS.si));
+    localStorage.setItem(AK.paramKey, JSON.stringify(DEFAULTS.ak));
+    localStorage.setItem(FU.paramKey, JSON.stringify(DEFAULTS.fu));
+    localStorage.setItem(WO.paramKey, JSON.stringify(DEFAULTS.wo));
+    localStorage.setItem(TEAM_KEY, JSON.stringify(DEFAULTS.team));
+  } catch (e) { /* 忽略 */ }
+  location.reload();
+}
+
+(function init() {
+  restoreTeamDuration();
+  SI.init(); AK.init(); FU.init(); WO.init();
+  el("teamDuration").addEventListener("input", function () { saveTeamDuration(); updateTeam(); });
+  el("teamCalcAll").addEventListener("click", function () { SI.onCalc(); AK.onCalc(); FU.onCalc(); WO.onCalc(); });
+  el("resetBtn").addEventListener("click", resetAll);
+  updateTeam();
+})();
+</script>
+</body>
+</html>
