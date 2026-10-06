@@ -1015,6 +1015,145 @@ footer #verDate{color:var(--ink-2);}
 .buff-toggle input:checked ~ span{color:var(--ink);}
 .buff-toggle b{color:var(--accent); font-weight:600; margin-left:5px;}
 
+/* ==========================================================================
+   明细 · 卡片流（保留表格 DOM，仅用 CSS 重排）
+   ========================================================================== */
+.table-scroll{overflow-x:visible !important; overflow-y:visible !important;}
+table.detail{
+  display:block !important; width:100% !important;
+  min-width:0 !important; table-layout:auto !important;
+}
+table.detail colgroup, table.detail thead{display:none !important;}
+table.detail tbody{
+  display:grid !important;
+  grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));
+  gap:12px;
+}
+table.detail tbody tr{
+  display:flex !important; flex-direction:column; gap:8px;
+  padding:14px 16px; border-radius:14px;
+  background:linear-gradient(180deg, var(--glass), transparent 70%);
+  border:1px solid var(--stroke);
+  box-shadow:var(--sh-1);
+  transition:border-color var(--fast), background var(--fast);
+}
+table.detail tbody tr:hover{
+  border-color:var(--stroke-hi);
+  background:linear-gradient(180deg, var(--glass-hi), transparent 70%);
+}
+table.detail tbody td{
+  display:flex !important; align-items:center; gap:10px;
+  padding:0 !important; border:none !important;
+  white-space:normal !important; font-size:12.5px;
+}
+table.detail tbody td::before{
+  content:attr(data-lb);
+  flex:none; width:62px; font-size:10px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);
+}
+table.detail tbody td:empty{display:none !important;}
+/* 首列：序号做卡片标题 */
+table.detail tbody td:first-child{
+  font-family:var(--serif); font-size:13px; font-weight:700;
+  color:var(--ink); letter-spacing:.08em;
+}
+table.detail tbody td:first-child::before{content:""; width:0;}
+table.detail tbody td:first-child::after{content:" 段"; font-weight:400; color:var(--ink-3);}
+/* 伤害列：右对齐、加大 */
+table.detail tbody td.num{
+  margin-top:2px; padding-top:8px !important;
+  border-top:1px dashed var(--border-row) !important;
+  font-size:15px; font-weight:700; color:var(--ink);
+  justify-content:flex-end; text-align:right;
+}
+table.detail tbody td.num::before{margin-right:auto; width:auto;}
+
+/* 列标题：丝柯克 / 爱可菲 / 芙宁娜（8 列） */
+#si_detailBody td:nth-child(2)::before,
+#ak_detailBody td:nth-child(2)::before,
+#fu_detailBody td:nth-child(2)::before{content:"羽毛";}
+#si_detailBody td:nth-child(3)::before,
+#ak_detailBody td:nth-child(3)::before,
+#fu_detailBody td:nth-child(3)::before{content:"动作";}
+#si_detailBody td:nth-child(4)::before,
+#ak_detailBody td:nth-child(4)::before,
+#fu_detailBody td:nth-child(4)::before{content:"讨龙";}
+#si_detailBody td:nth-child(5)::before,
+#ak_detailBody td:nth-child(5)::before,
+#fu_detailBody td:nth-child(5)::before{content:"芙宁娜";}
+#si_detailBody td:nth-child(6)::before,
+#ak_detailBody td:nth-child(6)::before,
+#fu_detailBody td:nth-child(6)::before{content:"倍率";}
+#si_detailBody td:nth-child(7)::before,
+#ak_detailBody td:nth-child(7)::before,
+#fu_detailBody td:nth-child(7)::before{content:"阶段";}
+#si_detailBody td:nth-child(8)::before,
+#ak_detailBody td:nth-child(8)::before,
+#fu_detailBody td:nth-child(8)::before{content:"伤害";}
+/* 沃雅妮莎（6 列） */
+#wo_detailBody td:nth-child(2)::before{content:"羽毛";}
+#wo_detailBody td:nth-child(3)::before{content:"动作";}
+#wo_detailBody td:nth-child(4)::before{content:"芙宁娜";}
+#wo_detailBody td:nth-child(5)::before{content:"倍率";}
+#wo_detailBody td:nth-child(6)::before{content:"伤害";}
+
+@media (max-width:720px){
+  table.detail tbody{grid-template-columns:1fr !important;}
+}
+
+/* ==========================================================================
+   序列积木拼图器
+   ========================================================================== */
+.seq-builder{grid-column:1/-1; display:flex; flex-direction:column; gap:10px;}
+.sq-palette{display:flex; flex-wrap:wrap; gap:7px;}
+.sq-add{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:7px 14px; border-radius:999px; cursor:pointer;
+  font-family:inherit; font-size:12.5px; font-weight:600; letter-spacing:.04em;
+  color:var(--ink-2); background:var(--glass); border:1px solid var(--stroke);
+  transition:color var(--fast), background var(--fast), border-color var(--fast);
+}
+.sq-add:hover{color:var(--on-cta); background:linear-gradient(180deg,var(--cta-hi),var(--cta)); border-color:transparent;}
+.sq-add small{font-size:10px; opacity:.7; font-weight:400;}
+.sq-canvas{
+  display:flex; flex-wrap:wrap; gap:7px;
+  padding:11px 12px; border-radius:12px; min-height:52px;
+  background:var(--field-bg); border:1px dashed var(--stroke-hi);
+}
+.sq-canvas:empty::after{
+  content:"序列为空 · 点击上方积木开始拼装";
+  font-size:11.5px; color:var(--ink-3);
+}
+.sq-block{
+  display:inline-flex; align-items:center; gap:4px;
+  padding:5px 7px 5px 11px; border-radius:10px;
+  background:linear-gradient(180deg,var(--glass-hi),transparent);
+  border:1px solid var(--stroke-hi);
+  font-size:12.5px; font-weight:600; color:var(--ink);
+}
+.sq-block b{font-weight:700;}
+.sq-block i{
+  font-style:normal; font-size:9.5px; color:var(--ink-3);
+  margin-left:2px; font-weight:400;
+}
+.sq-b{min-width:20px; height:20px; padding:0 4px; border-radius:6px;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-family:inherit; font-size:11px; line-height:1; cursor:pointer;
+  color:var(--ink-3); background:transparent; border:1px solid var(--stroke);
+  transition:color var(--fast), background var(--fast), border-color var(--fast);
+}
+.sq-b:hover{color:var(--ink); background:var(--glass-hi); border-color:var(--stroke-hi);}
+.sq-b.del:hover{color:var(--danger); border-color:var(--danger);}
+.sq-meta{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+.sq-count{font-size:11px; color:var(--ink-3);}
+.sq-clear{
+  padding:4px 12px; border-radius:999px; cursor:pointer;
+  font-family:inherit; font-size:11px; letter-spacing:.06em;
+  color:var(--ink-3); background:transparent; border:1px solid var(--stroke);
+  transition:color var(--fast), border-color var(--fast);
+}
+.sq-clear:hover{color:var(--danger); border-color:var(--danger);}
+
 /* ---------- 22. 打印 ---------- */
 @media print{
   body{background:#fff !important; color:#000 !important;}
@@ -1191,7 +1330,23 @@ html[data-theme="porcelain"]{
       <h2>丝柯克·C2-EQA <button type="button" class="params-open" data-target="si_params">⚙ 参数设置</button></h2>
       <div class="card-grid">
         <div class="params-box" id="si_params">
-          <div class="param-grid"><div class="param-group auto"><div class="group-title">轴与命座</div><div class="field" style="grid-column:1/-1"><label for="si_combo">输出序列 <span class="tag">可修改</span></label><input id="si_combo" type="text" spellcheck="false" value="e2aq 223 223 222z 223 22zs23"><div class="hint">e=元素战技 · q=爆发 · z=重击 · s=裂隙 · <b>数字+a</b>=普攻段数（223 = A1、A2、A3 各 2 段）· <b>a</b> 单独写 = 1 段。空格可任意分隔，改动后自动重排明细表。</div></div><div class="field"><label>命座</label><label class="buff-toggle"><input type="checkbox" id="si_c2" checked><span>二命<b>（预留）</b></span></label><div class="hint">大权区 ×1.7 为丝柯克固有乘数，与命座无关，始终生效。此勾选当前不参与计算，仅作记录。</div></div></div><div class="param-group auto"><div class="group-title">ENKA 自动读取</div><div class="field">
+          <div class="param-grid"><div class="param-group auto"><div class="group-title">轴与命座</div><div class="field" style="grid-column:1/-1"><label for="si_combo">输出序列 <span class="tag">可修改</span></label><input id="si_combo" type="text" spellcheck="false" value="e2aq 223 223 222z 223 22zs23"><div class="hint">e=元素战技 · q=爆发 · z=重击 · s=裂隙 · <b>数字+a</b>=普攻段数（223 = A1、A2、A3 各 2 段）· <b>a</b> 单独写 = 1 段。空格可任意分隔，改动后自动重排明细表。</div></div>
+<div class="seq-builder" id="si_seqBuilder">
+  <div class="sq-palette">
+    <button type="button" class="sq-add" data-tk="e">E <small>战技</small></button>
+    <button type="button" class="sq-add" data-tk="q">Q <small>爆发</small></button>
+    <button type="button" class="sq-add" data-tk="z">Z <small>重击</small></button>
+    <button type="button" class="sq-add" data-tk="s">S <small>裂隙</small></button>
+    <button type="button" class="sq-add" data-tk="1">A1 <small>1 段</small></button>
+    <button type="button" class="sq-add" data-tk="2">A2 <small>2 段</small></button>
+    <button type="button" class="sq-add" data-tk="3">A3 <small>3 段</small></button>
+  </div>
+  <div class="sq-canvas" id="si_seqCanvas"></div>
+  <div class="sq-meta">
+    <span class="sq-count" id="si_seqCount"></span>
+    <button type="button" class="sq-clear" id="si_seqClear">清空序列</button>
+  </div>
+</div><div class="field"><label>命座</label><label class="buff-toggle"><input type="checkbox" id="si_c2" checked><span>二命 · 大权区<b>×1.7</b></span></label><div class="hint">仅普攻乘大权区；取消勾选按 ×1.0 计算，Z / 裂隙本就不乘。</div></div></div><div class="param-group auto"><div class="group-title">ENKA 自动读取</div><div class="field">
               <label for="si_charLv">角色等级 <span class="tag">怪物固定 110</span></label>
               <input id="si_charLv" type="number" inputmode="decimal" min="1" max="90" step="any" placeholder="例如 90">
             </div><div class="field">
@@ -1525,7 +1680,7 @@ html[data-theme="porcelain"]{
   </div>
   <footer>
     <button class="reset-btn" id="resetBtn">恢复默认配置</button>
-    <br>预览版 · 猫灵 · <span id="verDate">2026-10-06</span><br>反馈 QQ：1592933029<br>v1.0.5
+    <br>预览版 · 猫灵 · <span id="verDate">2026-09-28</span><br>反馈 QQ：1592933029<br>v1.0.4
   </footer>
 </div>
 
@@ -1678,9 +1833,11 @@ var SI = (function () {
   var COMBO_DEFAULT = "e2aq 223 223 222z 223 22zs23";
   function comboStr() {
     var e = el("si_combo");
-    var v = (e && e.value) ? String(e.value) : "";
-    v = v.replace(/\s+/g, " ").trim();
-    return v || COMBO_DEFAULT;
+    /* 元素不存在 → 用默认序列；
+       用户主动清空 → 视为空序列（不回落默认），
+       否则拼图器「清空」永远清不掉、明细行数不变。 */
+    if (!e) { return COMBO_DEFAULT; }
+    return String(e.value || "").replace(/\s+/g, "");
   }
   var A_MULT = { 1: 2.811, 2: 2.535, 3: 1.603 };
   var A3_HITS = 2;
@@ -2158,7 +2315,7 @@ var SI = (function () {
       if (data.smallAtk !== undefined) { el("si_smallAtk").value = data.smallAtk; }
       if (data.flatAtk !== undefined) { var _fa = parseFloat(data.flatAtk); el("si_flatAtk").value = isNaN(_fa) ? 3500 : data.flatAtk; }
       if (data.featherTimes !== undefined) { var _ft = parseFloat(data.featherTimes); el("si_featherTimes").value = isNaN(_ft) ? 25 : data.featherTimes; }
-      el("si_daQuanPct").value = 1.7; // 固有固定值，与命座无关
+      el("si_daQuanPct").value = 1.7; // 隐藏固定值
       if (data.dmgBonus !== undefined) { el("si_dmgBonus").value = data.dmgBonus; }
       if (data.furenaPct !== undefined) { el("si_furenaPct").value = data.furenaPct; }
       if (data.critRate !== undefined) { el("si_critRate").value = data.critRate; }
@@ -3955,6 +4112,107 @@ var FU_SALON_MULT = {
 
 </script>
 <div id="tipLayer"></div>
+
+
+<script>
+/* ===== 丝柯克序列积木拼图器 =====
+   si_combo 文本框仍是唯一真源；这里只做可视化编辑。
+   积木 token 与 parseCombo 一一对应：e/q/z/s/1/2/3 */
+(function () {
+  "use strict";
+  var TK = {
+    e: { n: "E", d: "战技" }, q: { n: "Q", d: "爆发" },
+    z: { n: "Z", d: "重击" }, s: { n: "S", d: "裂隙" },
+    "1": { n: "A1", d: "1段" }, "2": { n: "A2", d: "2段" }, "3": { n: "A3", d: "3段" }
+  };
+  var input, canvas, countEl, clearBtn;
+
+  function tokens() {
+    var v = (input && input.value) ? String(input.value) : "";
+    var out = [];
+    for (var i = 0; i < v.length; i++) {
+      var c = v.charAt(i);
+      if (TK[c]) { out.push(c); }
+    }
+    return out;
+  }
+  function write(arr) {
+    if (!input) { return; }
+    input.value = arr.join("");
+    /* 触发既有 change 逻辑：保存 + 重排明细 + 重算 */
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  function render() {
+    if (!canvas) { return; }
+    var arr = tokens();
+    var html = "";
+    for (var i = 0; i < arr.length; i++) {
+      var t = TK[arr[i]];
+      html += '<span class="sq-block"><b>' + t.n + '</b><i>' + t.d + '</i>' +
+        '<button type="button" class="sq-b" data-act="left" data-i="' + i + '" title="左移">←</button>' +
+        '<button type="button" class="sq-b" data-act="right" data-i="' + i + '" title="右移">→</button>' +
+        '<button type="button" class="sq-b del" data-act="del" data-i="' + i + '" title="删除">×</button>' +
+        '</span>';
+    }
+    canvas.innerHTML = html;
+    if (countEl) {
+      countEl.textContent = "共 " + arr.length + " 个动作 · 明细行数随序列自动重排";
+    }
+  }
+
+  function boot() {
+    input = document.getElementById("si_combo");
+    canvas = document.getElementById("si_seqCanvas");
+    countEl = document.getElementById("si_seqCount");
+    clearBtn = document.getElementById("si_seqClear");
+    if (!input || !canvas) { return false; }
+
+    /* 调色板：追加 */
+    var pal = document.querySelectorAll("#si_seqBuilder .sq-add");
+    for (var i = 0; i < pal.length; i++) {
+      pal[i].addEventListener("click", function () {
+        var arr = tokens();
+        arr.push(this.getAttribute("data-tk"));
+        write(arr);
+      });
+    }
+    /* 画布：删除 / 移动 */
+    canvas.addEventListener("click", function (e) {
+      var b = e.target && e.target.closest ? e.target.closest(".sq-b") : null;
+      if (!b) { return; }
+      var i = parseInt(b.getAttribute("data-i"), 10);
+      var act = b.getAttribute("data-act");
+      var arr = tokens();
+      if (isNaN(i) || i < 0 || i >= arr.length) { return; }
+      if (act === "del") {
+        arr.splice(i, 1);
+      } else if (act === "left" && i > 0) {
+        var tmp = arr[i - 1]; arr[i - 1] = arr[i]; arr[i] = tmp;
+      } else if (act === "right" && i < arr.length - 1) {
+        var tmp2 = arr[i + 1]; arr[i + 1] = arr[i]; arr[i] = tmp2;
+      } else {
+        return;
+      }
+      write(arr);
+    });
+    /* 清空 */
+    if (clearBtn) {
+      clearBtn.addEventListener("click", function () { write([]); });
+    }
+    /* 外部（如恢复默认）改动文本框时同步画布 */
+    input.addEventListener("input", render);
+    input.addEventListener("change", render);
+    render();
+    return true;
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { setTimeout(boot, 0); });
+  } else {
+    setTimeout(boot, 0);
+  }
+})();
+</script>
 
 <script>
 /* ===== Aurora Glass 交互增强（无主题/外观面板版） =====
